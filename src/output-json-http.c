@@ -322,24 +322,26 @@ static void EveHttpLogJSONHeaders(
     jb_open_array(js, direction & LOG_HTTP_REQ_HEADERS ? "request_headers" : "response_headers");
     for (size_t i = 0; i < n; i++) {
         htp_header_t *h = htp_table_get_index(headers, i, NULL);
-        if ((http_ctx->flags & direction) == 0 && http_ctx->fields != 0) {
-            bool tolog = false;
-            for (HttpField f = HTTP_FIELD_ACCEPT; f < HTTP_FIELD_SIZE; f++) {
-                if ((http_ctx->fields & (1ULL << f)) != 0) {
-                    /* prevent logging a field twice if extended logging is
-                     enabled */
-                    if (((http_ctx->flags & LOG_HTTP_EXTENDED) == 0) ||
-                            ((http_ctx->flags & LOG_HTTP_EXTENDED) !=
-                                    (http_fields[f].flags & LOG_HTTP_EXTENDED))) {
-                        if (bstr_cmp_c_nocase(h->name, http_fields[f].htp_field) == 0) {
-                            tolog = true;
-                            break;
+        if (http_ctx != NULL) {
+            if ((http_ctx->flags & direction) == 0 && http_ctx->fields != 0) {
+                bool tolog = false;
+                for (HttpField f = HTTP_FIELD_ACCEPT; f < HTTP_FIELD_SIZE; f++) {
+                    if ((http_ctx->fields & (1ULL << f)) != 0) {
+                        /* prevent logging a field twice if extended logging is
+                           enabled */
+                        if (((http_ctx->flags & LOG_HTTP_EXTENDED) == 0) ||
+                                ((http_ctx->flags & LOG_HTTP_EXTENDED) !=
+                                 (http_fields[f].flags & LOG_HTTP_EXTENDED))) {
+                            if (bstr_cmp_c_nocase(h->name, http_fields[f].htp_field) == 0) {
+                                tolog = true;
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            if (!tolog) {
-                continue;
+                if (!tolog) {
+                    continue;
+                }
             }
         }
         array_empty = false;
@@ -434,7 +436,7 @@ void EveHttpLogJSONBodyBase64(JsonBuilder *js, Flow *f, uint64_t tx_id)
 }
 
 /* JSON format logging */
-static void EveHttpLogJSON(JsonHttpLogThread *aft, JsonBuilder *js, htp_tx_t *tx, uint64_t tx_id)
+static void EveHttpLogJSON(JsonHttpLogThread *aft, JsonBuilder *js, Flow * f, htp_tx_t *tx, uint64_t tx_id)
 {
     LogHttpFileCtx *http_ctx = aft->httplog_ctx;
     jb_open_object(js, "http");
@@ -464,7 +466,7 @@ static int JsonHttpLogger(ThreadVars *tv, void *thread_data, const Packet *p, Fl
 
     SCLogDebug("got a HTTP request and now logging !!");
 
-    EveHttpLogJSON(jhl, js, tx, tx_id);
+    EveHttpLogJSON(jhl, js, f, tx, tx_id);
     HttpXFFCfg *xff_cfg = jhl->httplog_ctx->xff_cfg != NULL ?
         jhl->httplog_ctx->xff_cfg : jhl->httplog_ctx->parent_xff_cfg;
 
@@ -520,6 +522,19 @@ bool EveHttpAddMetadata(const Flow *f, uint64_t tx_id, JsonBuilder *js)
     }
 
     return false;
+}
+
+void EveHttpLogAllJSONHeaders(JsonBuilder *js, Flow *f, uint64_t tx_id)
+{
+
+    HtpState *htp_state = (HtpState *)FlowGetAppState(f);
+    if (htp_state) {
+        htp_tx_t *tx = AppLayerParserGetTx(IPPROTO_TCP, ALPROTO_HTTP1, htp_state, tx_id);
+        if (tx) {
+            EveHttpLogJSONHeaders(js, LOG_HTTP_REQ_HEADERS, tx, NULL);
+            EveHttpLogJSONHeaders(js, LOG_HTTP_RES_HEADERS, tx, NULL);
+        }
+    }
 }
 
 static void OutputHttpLogDeinitSub(OutputCtx *output_ctx)

@@ -104,6 +104,7 @@
 #define LOG_JSON_RULE_METADATA     BIT_U16(8)
 #define LOG_JSON_RULE              BIT_U16(9)
 #define LOG_JSON_VERDICT           BIT_U16(10)
+#define LOG_JSON_HTTP_HEADERS      BIT_U16(11)
 
 #define METADATA_DEFAULTS ( LOG_JSON_FLOW |                        \
             LOG_JSON_APP_LAYER  |                                  \
@@ -474,6 +475,9 @@ static void AlertAddAppLayer(const Packet *p, JsonBuilder *jb, const uint64_t tx
                 }
                 if (option_flags & LOG_JSON_HTTP_BODY_BASE64) {
                     EveHttpLogJSONBodyBase64(jb, p->flow, tx_id);
+                }
+                if (option_flags & LOG_JSON_HTTP_HEADERS) {
+                    EveHttpLogAllJSONHeaders(jb, p->flow, tx_id);
                 }
             }
             jb_close(jb);
@@ -1107,6 +1111,7 @@ static void JsonAlertLogSetupMetadata(AlertJsonOutputCtx *json_output_ctx,
         SetFlag(conf, "http-body-printable", LOG_JSON_HTTP_BODY, &flags);
         SetFlag(conf, "http-body", LOG_JSON_HTTP_BODY_BASE64, &flags);
         SetFlag(conf, "verdict", LOG_JSON_VERDICT, &flags);
+        SetFlag(conf, "http-headers", LOG_JSON_HTTP_HEADERS, &flags);
 
         /* Check for obsolete flags and warn that they have no effect. */
         static const char *deprecated_flags[] = { "http", "tls", "ssh", "smtp", "dnp3", "app-layer",
