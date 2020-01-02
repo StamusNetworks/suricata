@@ -34,6 +34,7 @@
 #include "suricata-plugin.h"
 
 void OutputJsonRegister(void);
+void OutputJsonRegisterGlobalCounters(void);
 
 enum OutputJsonLogDirection {
     LOG_DIR_PACKET = 0,

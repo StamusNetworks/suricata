@@ -63,6 +63,7 @@
 #include "detect-fast-pattern.h"
 
 #include "datasets.h"
+#include "output-json.h"
 
 #include "feature.h"
 
@@ -2237,6 +2238,7 @@ void PreRunInit(const int runmode)
     AppLayerParserPostStreamSetup();
     AppLayerRegisterGlobalCounters();
     OutputFilestoreRegisterGlobalCounters();
+    OutputJsonRegisterGlobalCounters();
 }
 
 /* tasks we need to run before packets start flowing,
