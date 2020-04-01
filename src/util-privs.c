@@ -61,12 +61,20 @@ void SCDropMainThreadCaps(uint32_t userid, uint32_t groupid)
 
     switch (run_mode) {
         case RUNMODE_PCAP_DEV:
+            capng_updatev(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
+                    CAP_NET_RAW,            /* needed for pcap live mode */
+                    CAP_SYS_NICE,
+                    CAP_NET_ADMIN,
+                    -1);
+            break;
         case RUNMODE_AFP_DEV:
         case RUNMODE_AFXDP_DEV:
             capng_updatev(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
                     CAP_NET_RAW,            /* needed for pcap live mode */
                     CAP_SYS_NICE,
                     CAP_NET_ADMIN,
+                    CAP_SYS_ADMIN,          /* needed for XDP */
+                    CAP_SYS_RESOURCE,       /* needed for XDP */
                     -1);
             break;
         case RUNMODE_PFRING:
