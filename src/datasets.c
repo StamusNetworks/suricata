@@ -178,6 +178,10 @@ static FILE* DatasetOpenFile(Dataset *set)
                 set->load, strerror(errno));
     }
 
+    if (strcmp(fopen_mode, "r") != 0) {
+      	chown(set->load, 1001, 1001);
+    }
+
     return fp;
 }
 
