@@ -514,9 +514,17 @@ static int StreamTcpReassemblyConfig(bool quiet)
         SCLogConfig("stream.reassembly \"max-regions\": %u", max_regions);
 
     stream_config.prealloc_segments = segment_prealloc;
-    stream_config.sbcnf.buf_size = 2048;
     stream_config.sbcnf.max_regions = max_regions;
     stream_config.sbcnf.region_gap = STREAMING_BUFFER_REGION_GAP_DEFAULT;
+    /* reassembly will be done up to chunk size before we run
+     * the detection so let's allocate at least chunk size plus some margins */
+    int buf_size = stream_config.reassembly_toclient_chunk_size;
+    if (buf_size < stream_config.reassembly_toserver_chunk_size)
+        buf_size = stream_config.reassembly_toserver_chunk_size;
+    buf_size += 200;
+    if (buf_size > 4096)
+        buf_size = 4096;
+    stream_config.sbcnf.buf_size = buf_size;
     stream_config.sbcnf.Calloc = ReassembleCalloc;
     stream_config.sbcnf.Realloc = StreamTcpReassembleRealloc;
     stream_config.sbcnf.Free = ReassembleFree;
