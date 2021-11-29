@@ -1054,6 +1054,18 @@ int OutputJsonBuilderBuffer(JsonBuilder *js, OutputJsonThreadCtx *ctx)
     }
 
     MemBufferWriteRaw((*buffer), jb_ptr(js), jslen);
+
+    SC_ATOMIC_ADD(json_events_counter, 1);
+    SC_ATOMIC_ADD(json_events_bytes, (*buffer)->offset);
+    uint64_t max_size = SC_ATOMIC_GET(json_events_max_size);
+    if ((*buffer)->offset > max_size) {
+        SC_ATOMIC_SET(json_events_max_size, (*buffer)->offset);
+    }
+    uint64_t min_size = SC_ATOMIC_GET(json_events_min_size);
+    if (((*buffer)->offset < min_size) || (min_size == 0)) {
+        SC_ATOMIC_SET(json_events_min_size, (*buffer)->offset);
+    }
+
     LogFileWrite(file_ctx, *buffer);
 
     return 0;
