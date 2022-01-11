@@ -26,5 +26,6 @@
 
 void DetectSmbNamedPipeRegister(void);
 void DetectSmbShareRegister(void);
+void DetectSmbFilenameRegister(void);
 
 #endif /* __DETECT_SMB_NAMED_PIPE_H__ */
