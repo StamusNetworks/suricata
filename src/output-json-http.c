@@ -504,6 +504,17 @@ bool EveHttpAddMetadata(const Flow *f, uint64_t tx_id, JsonBuilder *js)
         if (tx) {
             EveHttpLogJSONBasic(js, tx);
             EveHttpLogJSONExtended(js, tx);
+            /* server */
+            if (tx->response_headers != NULL) {
+                htp_header_t *h_field = htp_table_get_c(tx->response_headers, "server");
+                if (h_field != NULL) {
+                    char *c = bstr_util_strdup_to_c(h_field->value);
+                    if (c != NULL) {
+                        jb_set_string(js, "server", c);
+                        SCFree(c);
+                    }
+                }
+            }
             return true;
         }
     }
