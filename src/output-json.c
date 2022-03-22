@@ -893,6 +893,13 @@ JsonBuilder *CreateEveHeader(const Packet *p, enum OutputJsonLogDirection dir,
 
     CreateEveFlowId(js, f);
 
+    /* add alerted flag if flow has alert */
+    if (f) {
+        if (f->flags & FLOW_HAS_ALERTS) {
+            jb_set_bool(js, "alerted", true);
+        }
+    }
+
     /* sensor id */
     if (sensor_id >= 0) {
         jb_set_uint(js, "sensor_id", sensor_id);
