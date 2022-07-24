@@ -89,6 +89,7 @@ typedef struct File_ {
 #ifdef HAVE_MAGIC
     char *magic;
 #endif
+    char *mimetype;
     struct File_ *next;
     SCMd5 *md5_ctx;
     uint8_t md5[SC_MD5_LEN];
@@ -220,6 +221,9 @@ uint32_t FileReassemblyDepth(void);
 
 void FileForceMagicEnable(void);
 int FileForceMagic(void);
+
+void FileForceMimetypeEnable(void);
+int FileForceMimetype(void);
 
 void FileForceMd5Enable(void);
 int FileForceMd5(void);

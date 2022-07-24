@@ -44,6 +44,7 @@ aes-gcm = "~0.9.4"
 
 der-parser = "~8.2.0"
 kerberos-parser = { version = "~0.7.1", default-features = false }
+tree_magic_mini = "~3.0.3"
 
 # Kerberos parsing still depends on der-parser 6.0.1.
 der-parser6 = { package = "der-parser", version = "~6.0.1", default-features = false }

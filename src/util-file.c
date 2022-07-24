@@ -55,6 +55,11 @@ static int g_file_force_filestore = 0;
  */
 static int g_file_force_magic = 0;
 
+/** \brief switch to force mimetype checks on all files
+ *         regardless of the rules.
+ */
+static int g_file_force_mimetype = 0;
+
 /** \brief switch to force md5 calculation on all files
  *         regardless of the rules.
  */
@@ -101,6 +106,12 @@ void FileForceMagicEnable(void)
     g_file_flow_mask |= (FLOWFILE_NO_MAGIC_TS|FLOWFILE_NO_MAGIC_TC);
 }
 
+void FileForceMimetypeEnable(void)
+{
+    g_file_force_mimetype = 1;
+    g_file_flow_mask |= (FLOWFILE_NO_MIMETYPE_TS|FLOWFILE_NO_MIMETYPE_TC);
+}
+
 void FileForceMd5Enable(void)
 {
     g_file_force_md5 = 1;
@@ -141,6 +152,11 @@ uint32_t FileReassemblyDepth(void)
 int FileForceMagic(void)
 {
     return g_file_force_magic;
+}
+
+int FileForceMimetype(void)
+{
+    return g_file_force_mimetype;
 }
 
 int FileForceMd5(void)
@@ -598,6 +614,8 @@ static void FileFree(File *ff, const StreamingBufferConfig *sbcfg)
     if (ff->magic != NULL)
         SCFree(ff->magic);
 #endif
+    if (ff->mimetype != NULL)
+        rs_cstring_free(ff->mimetype);
     if (ff->sb != NULL) {
         StreamingBufferFree(ff->sb, sbcfg);
     }
