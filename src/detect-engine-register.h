@@ -340,6 +340,7 @@ enum DetectKeywordId {
     DETECT_AL_IKE_KEY_EXCHANGE,
 
     DETECT_AL_JA4_HASH,
+    DETECT_FILE_MIMETYPE,
 
     /* make sure this stays last */
     DETECT_TBLSIZE,
