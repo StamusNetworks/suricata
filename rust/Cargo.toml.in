@@ -66,6 +66,7 @@ lazy_static = "~1.4.0"
 base64 = "~0.13.0"
 bendy = { version = "~0.3.3", default-features = false }
 asn1-rs = { version = "~0.5.2" }
+psl = "2"
 
 # The time crate has a policy of supporting Rust versions up to 6
 # month olds, so it needs to be pinned even at the patch level.

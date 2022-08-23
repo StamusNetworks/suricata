@@ -342,6 +342,7 @@ noinst_HEADERS = \
 	detect-tos.h \
 	detect-transform-casechange.h \
 	detect-transform-compress-whitespace.h \
+	detect-transform-domain.h \
 	detect-transform-dotprefix.h \
 	detect-transform-header-lowercase.h \
 	detect-transform-md5.h \
@@ -962,6 +963,7 @@ libsuricata_c_a_SOURCES = \
 	detect-tos.c \
 	detect-transform-casechange.c \
 	detect-transform-compress-whitespace.c \
+	detect-transform-domain.c\
 	detect-transform-dotprefix.c \
 	detect-transform-header-lowercase.c \
 	detect-transform-md5.c \
