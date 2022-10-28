@@ -121,6 +121,25 @@ int SignatureIsFilemagicInspecting(const Signature *s)
 }
 
 /**
+ *  \brief Check if a signature contains the file.mimetype keyword.
+ *
+ *  \param s signature
+ *
+ *  \retval 0 no
+ *  \retval 1 yes
+ */
+int SignatureIsFileMimetypeInspecting(const Signature *s)
+{
+    if (s == NULL)
+        return 0;
+
+    if (s->file_flags & FILE_SIG_NEED_MIMETYPE)
+        return 1;
+
+    return 0;
+}
+
+/**
  *  \brief Check if a signature contains the filemd5 keyword.
  *
  *  \param s signature
@@ -2054,6 +2073,7 @@ int SigAddressPrepareStage4(DetectEngineCtx *de_ctx)
         SigGroupHeadSetFileHashFlag(de_ctx, sgh);
         SigGroupHeadSetFilesizeFlag(de_ctx, sgh);
         SigGroupHeadSetFilestoreCount(de_ctx, sgh);
+        SigGroupHeadSetFileMimetypeFlag(de_ctx, sgh);
         SCLogDebug("filestore count %u", sgh->filestore_cnt);
 
         PrefilterSetupRuleGroup(de_ctx, sgh);

@@ -33,6 +33,7 @@
 #include "util-validate.h"
 #include "util-magic.h"
 #include "util-path.h"
+#include "util-mimetype.h"
 
 bool g_filedata_logger_enabled = false;
 
@@ -163,6 +164,9 @@ void OutputFiledataLogFfc(ThreadVars *tv, OutputFiledataLoggerThreadData *td, Pa
         if (FileDataSize(ff) == ff->content_stored && (file_trunc || file_close)) {
             if (ff->state < FILE_STATE_CLOSED) {
                 FileCloseFilePtr(ff, files.cfg, NULL, 0, FILE_TRUNCATED);
+            }
+            if (FileForceMimetype() && ff->mimetype == NULL) {
+                FileMimetypeLookup(ff);
             }
             file_flags |= OUTPUT_FILEDATA_FLAG_CLOSE;
             CallLoggers(tv, store, p, ff, txv, tx_id, NULL, 0, file_flags, dir);

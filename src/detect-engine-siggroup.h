@@ -58,6 +58,7 @@ void SigGroupHeadSetFilemagicFlag(DetectEngineCtx *, SigGroupHead *);
 void SigGroupHeadSetFilestoreCount(DetectEngineCtx *, SigGroupHead *);
 void SigGroupHeadSetFileHashFlag(DetectEngineCtx *, SigGroupHead *);
 void SigGroupHeadSetFilesizeFlag(DetectEngineCtx *, SigGroupHead *);
+void SigGroupHeadSetFileMimetypeFlag(DetectEngineCtx *, SigGroupHead *);
 
 int SigGroupHeadBuildNonPrefilterArray(DetectEngineCtx *de_ctx, SigGroupHead *sgh);
 

@@ -47,7 +47,6 @@ int FileMimetypeLookup(File *file)
         } else if (file->state >= FILE_STATE_CLOSED) {
             file->mimetype = rs_get_mime_type(data, data_len);
         }
-
     }
     SCReturnInt(0);
 }

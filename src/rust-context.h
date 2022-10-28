@@ -51,9 +51,9 @@ typedef struct SuricataContext_ {
 
     int (*FileOpenFileWithId)(FileContainer *, const StreamingBufferConfig *,
         uint32_t track_id, const uint8_t *name, uint16_t name_len,
-        const uint8_t *data, uint32_t data_len, uint16_t flags);
+        const uint8_t *data, uint32_t data_len, uint32_t flags);
     int (*FileCloseFileById)(FileContainer *, const StreamingBufferConfig *, uint32_t track_id,
-            const uint8_t *data, uint32_t data_len, uint16_t flags);
+            const uint8_t *data, uint32_t data_len, uint32_t flags);
     int (*FileAppendDataById)(FileContainer *, const StreamingBufferConfig *, uint32_t track_id,
             const uint8_t *data, uint32_t data_len);
     int (*FileAppendGAPById)(FileContainer *, const StreamingBufferConfig *, uint32_t track_id,

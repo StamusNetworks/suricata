@@ -248,7 +248,7 @@ void FileForceHashParseCfg(ConfNode *conf)
 
 uint16_t FileFlowFlagsToFlags(const uint16_t flow_file_flags, uint8_t direction)
 {
-    uint16_t flags = 0;
+    uint32_t flags = 0;
 
     if (direction == STREAM_TOSERVER) {
         if ((flow_file_flags & (FLOWFILE_NO_STORE_TS | FLOWFILE_STORE_TS)) ==
@@ -273,6 +273,10 @@ uint16_t FileFlowFlagsToFlags(const uint16_t flow_file_flags, uint8_t direction)
         if (flow_file_flags & FLOWFILE_NO_SHA256_TS) {
             flags |= FILE_NOSHA256;
         }
+
+        if (flow_file_flags & FLOWFILE_NO_MIMETYPE_TS) {
+            flags |= FILE_NOMIMETYPE;
+        }
     } else {
         if ((flow_file_flags & (FLOWFILE_NO_STORE_TC | FLOWFILE_STORE_TC)) ==
                 FLOWFILE_NO_STORE_TC) {
@@ -295,6 +299,10 @@ uint16_t FileFlowFlagsToFlags(const uint16_t flow_file_flags, uint8_t direction)
 
         if (flow_file_flags & FLOWFILE_NO_SHA256_TC) {
             flags |= FILE_NOSHA256;
+        }
+
+        if (flow_file_flags & FLOWFILE_NO_MIMETYPE_TC) {
+            flags |= FILE_NOMIMETYPE;
         }
     }
     DEBUG_VALIDATE_BUG_ON((flags & (FILE_STORE | FILE_NOSTORE)) == (FILE_STORE | FILE_NOSTORE));
@@ -401,6 +409,15 @@ static int FilePruneFile(File *file, const StreamingBufferConfig *cfg)
         SCLogDebug("file->flags & FILE_NOMAGIC == true");
     }
 #endif
+    if (!(file->flags & FILE_NOMIMETYPE)) {
+        /* need magic but haven't set it yet, bail out */
+        if (file->mimetype == NULL)
+            SCReturnInt(0);
+        else
+            SCLogDebug("file->mimetype %s", file->mimetype);
+    } else {
+        SCLogDebug("file->flags & FILE_NOMIMETYPE == true");
+    }
     uint64_t left_edge = FileDataSize(file);
     if (file->flags & FILE_STORE) {
         left_edge = MIN(left_edge,file->content_stored);
@@ -919,7 +936,7 @@ int FileSetRange(FileContainer *ffc, uint64_t start, uint64_t end)
  */
 static File *FileOpenFile(FileContainer *ffc, const StreamingBufferConfig *sbcfg,
         const uint8_t *name, uint16_t name_len,
-        const uint8_t *data, uint32_t data_len, uint16_t flags)
+        const uint8_t *data, uint32_t data_len, uint32_t flags)
 {
     SCEnter();
 
@@ -946,6 +963,10 @@ static File *FileOpenFile(FileContainer *ffc, const StreamingBufferConfig *sbcfg
     if (flags & FILE_NOMAGIC) {
         SCLogDebug("not doing magic for this file");
         ff->flags |= FILE_NOMAGIC;
+    }
+    if (flags & FILE_NOMIMETYPE) {
+        SCLogDebug("not doing mimetype for this file");
+        ff->flags |= FILE_NOMIMETYPE;
     }
     if (flags & FILE_NOMD5) {
         SCLogDebug("not doing md5 for this file");
@@ -1000,7 +1021,7 @@ static File *FileOpenFile(FileContainer *ffc, const StreamingBufferConfig *sbcfg
  *  \retval -1 failed */
 int FileOpenFileWithId(FileContainer *ffc, const StreamingBufferConfig *sbcfg,
         uint32_t track_id, const uint8_t *name, uint16_t name_len,
-        const uint8_t *data, uint32_t data_len, uint16_t flags)
+        const uint8_t *data, uint32_t data_len, uint32_t flags)
 {
     SCLogDebug("ffc %p track_id %u", ffc, track_id);
     File *ff = FileOpenFile(ffc, sbcfg, name, name_len, data, data_len, flags);
@@ -1012,7 +1033,7 @@ int FileOpenFileWithId(FileContainer *ffc, const StreamingBufferConfig *sbcfg,
 }
 
 int FileCloseFilePtr(File *ff, const StreamingBufferConfig *sbcfg, const uint8_t *data,
-        uint32_t data_len, uint16_t flags)
+        uint32_t data_len, uint32_t flags)
 {
     SCEnter();
 
@@ -1095,7 +1116,7 @@ int FileCloseFilePtr(File *ff, const StreamingBufferConfig *sbcfg, const uint8_t
  *  \retval -1 error
  */
 int FileCloseFile(FileContainer *ffc, const StreamingBufferConfig *sbcfg, const uint8_t *data,
-        uint32_t data_len, uint16_t flags)
+        uint32_t data_len, uint32_t flags)
 {
     SCEnter();
 
@@ -1111,7 +1132,7 @@ int FileCloseFile(FileContainer *ffc, const StreamingBufferConfig *sbcfg, const 
 }
 
 int FileCloseFileById(FileContainer *ffc, const StreamingBufferConfig *sbcfg, uint32_t track_id,
-        const uint8_t *data, uint32_t data_len, uint16_t flags)
+        const uint8_t *data, uint32_t data_len, uint32_t flags)
 {
     SCEnter();
 
@@ -1135,7 +1156,7 @@ int FileCloseFileById(FileContainer *ffc, const StreamingBufferConfig *sbcfg, ui
  *  This function will ignore the flags for the irrelevant direction and
  *  also mask the flags with the global settings.
  */
-void FileUpdateFlowFileFlags(Flow *f, uint16_t set_file_flags, uint8_t direction)
+void FileUpdateFlowFileFlags(Flow *f, uint32_t set_file_flags, uint8_t direction)
 {
     SCEnter();
     DEBUG_ASSERT_FLOW_LOCKED(f);

@@ -42,21 +42,22 @@ typedef struct SCSha1 SCSha1;
 typedef struct SCMd5 SCMd5;
 #define SC_MD5_LEN 16
 
-#define FILE_TRUNCATED  BIT_U16(0)
-#define FILE_NOMAGIC    BIT_U16(1)
-#define FILE_NOMD5      BIT_U16(2)
-#define FILE_MD5        BIT_U16(3)
-#define FILE_NOSHA1     BIT_U16(4)
-#define FILE_SHA1       BIT_U16(5)
-#define FILE_NOSHA256   BIT_U16(6)
-#define FILE_SHA256     BIT_U16(7)
-#define FILE_LOGGED     BIT_U16(8)
-#define FILE_NOSTORE    BIT_U16(9)
-#define FILE_STORE      BIT_U16(10)
-#define FILE_STORED     BIT_U16(11)
-#define FILE_NOTRACK    BIT_U16(12) /**< track size of file */
-#define FILE_USE_DETECT BIT_U16(13) /**< use content_inspected tracker */
-#define FILE_HAS_GAPS   BIT_U16(15)
+#define FILE_TRUNCATED  BIT_U32(0)
+#define FILE_NOMAGIC    BIT_U32(1)
+#define FILE_NOMD5      BIT_U32(2)
+#define FILE_MD5        BIT_U32(3)
+#define FILE_NOSHA1     BIT_U32(4)
+#define FILE_SHA1       BIT_U32(5)
+#define FILE_NOSHA256   BIT_U32(6)
+#define FILE_SHA256     BIT_U32(7)
+#define FILE_LOGGED     BIT_U32(8)
+#define FILE_NOSTORE    BIT_U32(9)
+#define FILE_STORE      BIT_U32(10)
+#define FILE_STORED     BIT_U32(11)
+#define FILE_NOTRACK    BIT_U32(12) /**< track size of file */
+#define FILE_USE_DETECT BIT_U32(13) /**< use content_inspected tracker */
+#define FILE_HAS_GAPS   BIT_U32(15)
+#define FILE_NOMIMETYPE BIT_U32(16)
 
 // to be used instead of PATH_MAX which depends on the OS
 #define SC_FILENAME_MAX 4096
@@ -77,7 +78,7 @@ typedef enum FileState_ {
 } FileState;
 
 typedef struct File_ {
-    uint16_t flags;
+    uint32_t flags;
     uint16_t name_len;
     FileState state;
     StreamingBuffer *sb;
@@ -145,7 +146,7 @@ void FileContainerAdd(FileContainer *, File *);
  */
 int FileOpenFileWithId(FileContainer *, const StreamingBufferConfig *,
         uint32_t track_id, const uint8_t *name, uint16_t name_len,
-        const uint8_t *data, uint32_t data_len, uint16_t flags);
+        const uint8_t *data, uint32_t data_len, uint32_t flags);
 
 /**
  *  \brief Close a File
@@ -159,11 +160,11 @@ int FileOpenFileWithId(FileContainer *, const StreamingBufferConfig *,
  *  \retval -1 error
  */
 int FileCloseFile(FileContainer *, const StreamingBufferConfig *sbcfg, const uint8_t *data,
-        uint32_t data_len, uint16_t flags);
+        uint32_t data_len, uint32_t flags);
 int FileCloseFileById(FileContainer *, const StreamingBufferConfig *sbcfg, uint32_t track_id,
-        const uint8_t *data, uint32_t data_len, uint16_t flags);
+        const uint8_t *data, uint32_t data_len, uint32_t flags);
 int FileCloseFilePtr(File *ff, const StreamingBufferConfig *sbcfg, const uint8_t *data,
-        uint32_t data_len, uint16_t flags);
+        uint32_t data_len, uint32_t flags);
 
 /**
  *  \brief Store a chunk of file data in the flow. The open "flowfile"
@@ -234,7 +235,7 @@ int FileForceSha1(void);
 void FileForceSha256Enable(void);
 int FileForceSha256(void);
 
-void FileUpdateFlowFileFlags(Flow *f, uint16_t set_file_flags, uint8_t direction);
+void FileUpdateFlowFileFlags(Flow *f, uint32_t set_file_flags, uint8_t direction);
 
 void FileForceHashParseCfg(ConfNode *);
 

@@ -312,14 +312,15 @@ typedef struct DetectPort_ {
 #define DETECT_ENGINE_THREAD_CTX_FRAME_ID_SET         0x0001
 #define DETECT_ENGINE_THREAD_CTX_STREAM_CONTENT_MATCH 0x0004
 
-#define FILE_SIG_NEED_FILE          BIT_U8(0)
-#define FILE_SIG_NEED_FILENAME      BIT_U8(1)
-#define FILE_SIG_NEED_MAGIC         BIT_U8(2)    /**< need the start of the file */
-#define FILE_SIG_NEED_FILECONTENT   BIT_U8(3)
-#define FILE_SIG_NEED_MD5           BIT_U8(4)
-#define FILE_SIG_NEED_SHA1          BIT_U8(5)
-#define FILE_SIG_NEED_SHA256        BIT_U8(6)
-#define FILE_SIG_NEED_SIZE          BIT_U8(7)
+#define FILE_SIG_NEED_FILE          BIT_U16(0)
+#define FILE_SIG_NEED_FILENAME      BIT_U16(1)
+#define FILE_SIG_NEED_MAGIC         BIT_U16(2)    /**< need the start of the file */
+#define FILE_SIG_NEED_FILECONTENT   BIT_U16(3)
+#define FILE_SIG_NEED_MD5           BIT_U16(4)
+#define FILE_SIG_NEED_SHA1          BIT_U16(5)
+#define FILE_SIG_NEED_SHA256        BIT_U16(6)
+#define FILE_SIG_NEED_SIZE          BIT_U16(7)
+#define FILE_SIG_NEED_MIMETYPE      BIT_U16(8)
 
 /* Detection Engine flags */
 #define DE_QUIET           0x01     /**< DE is quiet (esp for unittests) */
@@ -607,7 +608,7 @@ typedef struct Signature_ {
 
     /** inline -- action */
     uint8_t action;
-    uint8_t file_flags;
+    uint16_t file_flags;
 
     /** addresses, ports and proto this sig matches on */
     DetectProto proto;
@@ -1338,6 +1339,7 @@ enum {
 #define SIG_GROUP_HEAD_HAVEFILESIZE     BIT_U32(22)
 #define SIG_GROUP_HEAD_HAVEFILESHA1     BIT_U32(23)
 #define SIG_GROUP_HEAD_HAVEFILESHA256   BIT_U32(24)
+#define SIG_GROUP_HEAD_HAVEFILEMIMETYPE BIT_U32(25)
 
 enum MpmBuiltinBuffers {
     MPMB_TCP_PKT_TS,

@@ -38,6 +38,7 @@
 #include "app-layer-smtp.h"
 
 #include "util-enum.h"
+#include "util-file.h"
 #include "util-mpm.h"
 #include "util-debug.h"
 #include "util-print.h"
@@ -1228,7 +1229,7 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
             } else if (smtp_config.raw_extraction) {
                 if (FileOpenFileWithId(&tx->files_ts, &smtp_config.sbcfg, state->file_track_id++,
                             (uint8_t *)rawmsgname, strlen(rawmsgname), NULL, 0,
-                            FILE_NOMD5 | FILE_NOMAGIC) == 0) {
+                            FILE_NOMD5 | FILE_NOMAGIC | FILE_NOMIMETYPE) == 0) {
                     SMTPNewFile(tx, tx->files_ts.tail);
                 }
             } else if (smtp_config.decode_mime) {
