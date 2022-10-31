@@ -312,14 +312,14 @@ typedef struct DetectPort_ {
 #define DETECT_ENGINE_THREAD_CTX_FRAME_ID_SET         0x0001
 #define DETECT_ENGINE_THREAD_CTX_STREAM_CONTENT_MATCH 0x0004
 
-#define FILE_SIG_NEED_FILE          0x01
-#define FILE_SIG_NEED_FILENAME      0x02
-#define FILE_SIG_NEED_MAGIC         0x04    /**< need the start of the file */
-#define FILE_SIG_NEED_FILECONTENT   0x08
-#define FILE_SIG_NEED_MD5           0x10
-#define FILE_SIG_NEED_SHA1          0x20
-#define FILE_SIG_NEED_SHA256        0x40
-#define FILE_SIG_NEED_SIZE          0x80
+#define FILE_SIG_NEED_FILE          BIT_U8(0)
+#define FILE_SIG_NEED_FILENAME      BIT_U8(1)
+#define FILE_SIG_NEED_MAGIC         BIT_U8(2)    /**< need the start of the file */
+#define FILE_SIG_NEED_FILECONTENT   BIT_U8(3)
+#define FILE_SIG_NEED_MD5           BIT_U8(4)
+#define FILE_SIG_NEED_SHA1          BIT_U8(5)
+#define FILE_SIG_NEED_SHA256        BIT_U8(6)
+#define FILE_SIG_NEED_SIZE          BIT_U8(7)
 
 /* Detection Engine flags */
 #define DE_QUIET           0x01     /**< DE is quiet (esp for unittests) */
