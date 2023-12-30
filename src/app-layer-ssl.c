@@ -122,6 +122,7 @@ SCEnumCharMap tls_decoder_event_table[] = {
     { "CERTIFICATE_INVALID_VALIDITY", TLS_DECODER_EVENT_CERTIFICATE_INVALID_VALIDITY },
     { "ERROR_MESSAGE_ENCOUNTERED", TLS_DECODER_EVENT_ERROR_MSG_ENCOUNTERED },
     { "DUPLICATE_HANDSHAKE_MESSAGE", TLS_DECODER_EVENT_DUPLICATE_HANDSHAKE_MESSAGE },
+    { "DUPLICATE_ALPN_SERVER_MESSAGE", TLS_DECODER_EVENT_DUPLICATE_ALPN_SERVER_MESSAGE },
     /* used as a generic error event */
     { "INVALID_SSL_RECORD", TLS_DECODER_EVENT_INVALID_SSL_RECORD },
     { NULL, -1 },
@@ -1264,8 +1265,7 @@ static inline int TLSDecodeHSHelloExtensionALPN(
     if (!(HAS_SPACE(alpn_len)))
         goto invalid_length;
 
-    if (ssl_state->curr_connp->ja4 != NULL &&
-            ssl_state->current_flags & SSL_AL_FLAG_STATE_CLIENT_HELLO) {
+    if (ssl_state->curr_connp->ja4 != NULL || 1) {
         /* We use 32 bits here to avoid potentially overflowing a value that
            needs to be compared to an unsigned 16-bit value. */
         uint32_t alpn_processed_len = 0;
@@ -1286,8 +1286,47 @@ static inline int TLSDecodeHSHelloExtensionALPN(
 
             /* Only record the first value for JA4 */
             if (alpn_processed_len == 1) {
-                SCJA4SetALPN(ssl_state->curr_connp->ja4, (const char *)input, protolen);
+                if (ssl_state->curr_connp->ja4 != NULL &&
+                        ssl_state->current_flags & SSL_AL_FLAG_STATE_CLIENT_HELLO) {
+                    SCJA4SetALPN(ssl_state->curr_connp->ja4, (const char *)input, protolen);
+                }
             }
+            if (protolen == 2) {
+                uint16_t value = (uint16_t)(*input << 8) | *(input + 1);
+                if (TLSDecodeValueIsGREASE(value)) {
+                    alpn_processed_len += protolen;
+                    input += protolen;
+                    continue;
+                }
+            }
+
+            ALPNList *alpn_elt = SCMalloc(sizeof(ALPNList));
+            if (alpn_elt == NULL) {
+                alpn_processed_len += protolen;
+                input += protolen;
+                continue;
+            }
+            alpn_elt->alproto = SCMalloc(protolen + 1);
+            if (alpn_elt->alproto == NULL) {
+                SCFree(alpn_elt);
+                alpn_processed_len += protolen;
+                input += protolen;
+                continue;
+            }
+
+            if (SafeMemcpy(alpn_elt->alproto, 0, protolen + 1,
+                input, 0, protolen, protolen) != 0) {
+                    alpn_processed_len += protolen;
+                    input += protolen;
+                    continue;
+            }
+            alpn_elt->alproto[protolen] = 0;
+            alpn_elt->alproto_len = protolen;
+            /* Server must send only one single application layer (RFC 7301) */
+            if (!TAILQ_EMPTY(&ssl_state->curr_connp->alpn) && (ssl_state->current_flags & SSL_AL_FLAG_STATE_SERVER_HELLO)) {
+                SSLSetEvent(ssl_state, TLS_DECODER_EVENT_DUPLICATE_ALPN_SERVER_MESSAGE);
+            }
+            TAILQ_INSERT_TAIL(&ssl_state->curr_connp->alpn, alpn_elt, next);
 
             alpn_processed_len += protolen;
             input += protolen;
@@ -2851,6 +2890,8 @@ static void *SSLStateAlloc(void *orig_state, AppProto proto_orig)
     memset(ssl_state->server_connp.random, 0, TLS_RANDOM_LEN);
     TAILQ_INIT(&ssl_state->server_connp.certs);
     TAILQ_INIT(&ssl_state->client_connp.certs);
+    TAILQ_INIT(&ssl_state->client_connp.alpn);
+    TAILQ_INIT(&ssl_state->server_connp.alpn);
 
     return (void *)ssl_state;
 }
@@ -2927,6 +2968,20 @@ static void SSLStateFree(void *p)
         SCFree(item);
     }
     TAILQ_INIT(&ssl_state->client_connp.certs);
+
+    ALPNList *alpn_elt;
+    while ((alpn_elt = TAILQ_FIRST(&ssl_state->server_connp.alpn))) {
+        TAILQ_REMOVE(&ssl_state->server_connp.alpn, alpn_elt, next);
+        SCFree(alpn_elt->alproto);
+        SCFree(alpn_elt);
+    }
+    TAILQ_INIT(&ssl_state->server_connp.alpn);
+    while ((alpn_elt = TAILQ_FIRST(&ssl_state->client_connp.alpn))) {
+        TAILQ_REMOVE(&ssl_state->client_connp.alpn, alpn_elt, next);
+        SCFree(alpn_elt->alproto);
+        SCFree(alpn_elt);
+    }
+    TAILQ_INIT(&ssl_state->client_connp.alpn);
 
     SCFree(ssl_state);
 

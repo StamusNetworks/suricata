@@ -78,6 +78,7 @@ SC_ATOMIC_EXTERN(unsigned int, cert_id);
 #define LOG_TLS_FIELD_CLIENT_CERT       (1 << 14)
 #define LOG_TLS_FIELD_CLIENT_CHAIN      (1 << 15)
 #define LOG_TLS_FIELD_JA4               (1 << 16)
+#define LOG_TLS_FIELD_ALPN              (1 << 17)
 
 typedef struct {
     const char *name;
@@ -92,7 +93,8 @@ TlsFields tls_fields[] = { { "version", LOG_TLS_FIELD_VERSION },
     { "chain", LOG_TLS_FIELD_CHAIN }, { "session_resumed", LOG_TLS_FIELD_SESSION_RESUMED },
     { "ja3", LOG_TLS_FIELD_JA3 }, { "ja3s", LOG_TLS_FIELD_JA3S },
     { "client", LOG_TLS_FIELD_CLIENT }, { "client_certificate", LOG_TLS_FIELD_CLIENT_CERT },
-    { "client_chain", LOG_TLS_FIELD_CLIENT_CHAIN }, { "ja4", LOG_TLS_FIELD_JA4 }, { NULL, -1 } };
+    { "client_chain", LOG_TLS_FIELD_CLIENT_CHAIN }, { "ja4", LOG_TLS_FIELD_JA4 },
+    { "alpn",            LOG_TLS_FIELD_ALPN }, { NULL, -1 } };
 
 typedef struct OutputTlsCtx_ {
     uint32_t flags;  /** Store mode */
@@ -219,6 +221,22 @@ static void JsonTlsLogSCJA4(JsonBuilder *js, SSLState *ssl_state)
         /* JA4 hash has 36 characters */
         SCJA4GetHash(ssl_state->client_connp.ja4, (uint8_t(*)[JA4_HEX_LEN])buffer);
         jb_set_string_from_bytes(js, "ja4", buffer, JA4_HEX_LEN);
+    }
+}
+
+static void JsonTlsLogSCALPN(JsonBuilder *js, SSLState *ssl_state)
+{
+    if (!TAILQ_EMPTY(&ssl_state->client_connp.alpn)) {
+        ALPNList *alpn_elt;
+        jb_open_array(js, "alpn_ts");
+        TAILQ_FOREACH(alpn_elt, &ssl_state->client_connp.alpn, next) {
+            jb_append_string_from_bytes(js, alpn_elt->alproto, alpn_elt->alproto_len);
+        }
+        jb_close(js);
+    }
+    if (!TAILQ_EMPTY(&ssl_state->server_connp.alpn)) {
+        ALPNList *alpn_elt = TAILQ_FIRST(&ssl_state->server_connp.alpn);
+        jb_set_string_from_bytes(js, "alpn_tc", alpn_elt->alproto, alpn_elt->alproto_len);
     }
 }
 
@@ -406,6 +424,10 @@ static void JsonTlsLogJSONCustom(OutputTlsCtx *tls_ctx, JsonBuilder *js,
             jb_close(js);
         }
     }
+
+    /* tls ALPN */
+    if (tls_ctx->fields & LOG_TLS_FIELD_ALPN)
+        JsonTlsLogSCALPN(js, ssl_state);
 }
 
 void JsonTlsLogJSONExtended(JsonBuilder *tjs, SSLState *state, const bool log_ja4)
@@ -445,6 +467,9 @@ void JsonTlsLogJSONExtended(JsonBuilder *tjs, SSLState *state, const bool log_ja
         JsonTlsLogClientCert(tjs, &state->client_connp, false, false);
         jb_close(tjs);
     }
+
+    /* tls ALPN */
+    JsonTlsLogSCALPN(tjs, state);
 }
 
 static int JsonTlsLogger(ThreadVars *tv, void *thread_data, const Packet *p,

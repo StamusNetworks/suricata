@@ -5552,6 +5552,16 @@
                 },
                 "ja4": {
                     "type": "string"
+                },
+                "alpn_ts": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "alpn_tc": {
+                    "type": "string"
                 }
             },
             "additionalProperties": false

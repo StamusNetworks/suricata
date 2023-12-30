@@ -71,6 +71,7 @@ enum {
     TLS_DECODER_EVENT_CERTIFICATE_INVALID_VALIDITY,
     TLS_DECODER_EVENT_ERROR_MSG_ENCOUNTERED,
     TLS_DECODER_EVENT_DUPLICATE_HANDSHAKE_MESSAGE,
+    TLS_DECODER_EVENT_DUPLICATE_ALPN_SERVER_MESSAGE,
     TLS_DECODER_EVENT_INVALID_SSL_RECORD,
 };
 
@@ -221,12 +222,17 @@ static inline bool TLSVersionValid(const uint16_t version)
     return false;
 }
 
+typedef struct ALPNList_ {
+    uint8_t *alproto;
+    uint32_t alproto_len;
+    TAILQ_ENTRY(ALPNList_) next;
+} ALPNList;
+
 typedef struct SSLCertsChain_ {
     uint8_t *cert_data;
     uint32_t cert_len;
     TAILQ_ENTRY(SSLCertsChain_) next;
 } SSLCertsChain;
-
 
 typedef struct SSLStateConnp_ {
     /* record length */
@@ -257,6 +263,8 @@ typedef struct SSLStateConnp_ {
 
     /* ssl server name indication extension */
     char *sni;
+
+    TAILQ_HEAD(, ALPNList_) alpn;
 
     char *session_id;
 
