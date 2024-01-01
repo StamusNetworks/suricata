@@ -43,6 +43,8 @@
 typedef struct DetectPcreData_ {
     /* pcre options */
     DetectParseRegex parse_regex;
+    /* String for logging */
+    char *pcre_str;
 
     int opts;
     uint16_t flags;
