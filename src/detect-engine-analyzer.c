@@ -39,12 +39,14 @@
 #include "detect-bytejump.h"
 #include "detect-bytetest.h"
 #include "detect-flow.h"
+#include "detect-flowbits.h"
 #include "detect-tcp-flags.h"
 #include "detect-ipopts.h"
 #include "feature.h"
 #include "util-print.h"
 #include "util-time.h"
 #include "util-validate.h"
+#include "util-var-name.h"
 #include "util-conf.h"
 
 static int rule_warnings_only = 0;
@@ -862,6 +864,61 @@ static void DumpMatches(RuleAnalyzer *ctx, JsonBuilder *js, const SigMatchData *
                 jb_set_string(js, "option", flag);
                 jb_close(js);
                 break;
+            }
+            case DETECT_FLOWBITS: {
+                const DetectFlowbitsData *cd = (const DetectFlowbitsData *)smd->ctx;
+
+                jb_open_object(js, "flowbits");
+                switch (cd->cmd) {
+                    case DETECT_FLOWBITS_CMD_ISSET:
+                        jb_set_string(js, "cmd", "isset");
+                        break;
+                    case DETECT_FLOWBITS_CMD_ISNOTSET:
+                        jb_set_string(js, "cmd", "isnotset");
+                        break;
+                    case DETECT_FLOWBITS_CMD_SET:
+                        jb_set_string(js, "cmd", "set");
+                        break;
+                    case DETECT_FLOWBITS_CMD_UNSET:
+                        jb_set_string(js, "cmd", "unset");
+                        break;
+                    case DETECT_FLOWBITS_CMD_TOGGLE:
+                        jb_set_string(js, "cmd", "toggle");
+                        break;
+                }
+                bool is_or = false;
+                jb_open_array(js, "names");
+                if (cd->or_list_size == 0) {
+                    jb_append_string(js, VarNameStoreSetupLookup(cd->idx, VAR_TYPE_FLOW_BIT));
+                } else if (cd->or_list_size > 0) {
+                    is_or = true;
+                    for (uint8_t i = 0; i < cd->or_list_size; i++) {
+                        const char *varname =
+                                VarNameStoreSetupLookup(cd->or_list[i], VAR_TYPE_FLOW_BIT);
+                        jb_append_string(js, varname);
+                    }
+                }
+                jb_close(js); // array
+                if (is_or) {
+                    jb_set_string(js, "operator", "or");
+                }
+                jb_close(js); // object
+                break;
+            }
+            case DETECT_FLOW: {
+                const DetectFlowData *cd = (const DetectFlowData *)smd->ctx;
+                jb_open_object(js, "flow");
+                if (cd->flags & DETECT_FLOW_FLAG_ESTABLISHED) {
+                    jb_set_bool(js, "established", true);
+                } else {
+                    jb_set_bool(js, "established", false);
+                }
+                if (cd->flags & DETECT_FLOW_FLAG_TOSERVER) {
+                    jb_set_bool(js, "to_server", true);
+                } else {
+                    jb_set_bool(js, "to_server", false);
+                }
+                jb_close(js);
             }
         }
         jb_close(js);
