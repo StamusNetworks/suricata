@@ -143,7 +143,7 @@ void OutputJsonRegisterGlobalCounters(void)
 {
     SC_ATOMIC_INIT(json_events_counter);
     StatsRegisterGlobalCounter("json.events", OutputJsonEventGlobalCounter);
-    SC_ATOMIC_INIT(json_events_counter);
+    SC_ATOMIC_INIT(json_events_bytes);
     StatsRegisterGlobalCounter("json.bytes", OutputJsonEventBytes);
     SC_ATOMIC_INIT(json_events_min_size);
     StatsRegisterGlobalCounter("json.min_size", OutputJsonEventMinSize);
