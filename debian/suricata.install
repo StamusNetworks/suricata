@@ -1,0 +1,8 @@
+
+suricata.yaml etc/suricata
+etc/reference.config etc/suricata
+etc/classification.config etc/suricata
+rules/*.rules etc/suricata/rules
+debian/set_irq_affinity usr/bin/
+debian/disable-interface-offloading_stamus.sh usr/bin/
+stamus/ebpf/*bpf etc/suricata/ebpf/

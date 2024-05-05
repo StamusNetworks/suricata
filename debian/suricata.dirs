@@ -1,0 +1,10 @@
+
+etc/suricata
+etc/suricata/rules
+etc/suricata/ebpf
+usr/bin
+var/log/suricata
+var/log/suricata/core
+var/log/suricata/files
+var/log/suricata/certs
+

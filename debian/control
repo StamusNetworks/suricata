@@ -1,0 +1,42 @@
+Source: suricata
+Section: devel
+Priority: optional
+Maintainer: Peter Manev <pmanev@stamus-networks.com>
+Build-Depends: debhelper (>= 9), autotools-dev, dh-autoreconf, pkg-config, libnet1-dev | libnet-dev, libnspr4-dev, libgeoip1, libgeoip-dev, libcap-ng-dev, libnss3-dev, libpcap-dev, libpcre3-dev, libyaml-dev, zlib1g-dev | libz-dev, libmagic-dev, libjansson-dev, libluajit-5.1-dev [i386 amd64 powerpc mips armel armhf] , wget, python3:any, libluajit-5.1-common, libluajit-5.1-dev, libhyperscan-dev, libhiredis-dev
+X-Python-Version: >= 2.6 
+Standards-Version: 3.9.5
+Homepage: http://www.openinfosecfoundation.org/
+#Vcs-Git: git://anonscm.debian.org/collab-maint/suricata.git
+#Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/suricata.git;a=summary
+
+Package: suricata
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3:any,  wget, libluajit-5.1-common
+Description: Suricata open source multi-thread IDS/IPS/NSM system.
+ Suricata IDS/IPS/NSM 
+     http://www.openinfosecfoundation.org/
+     http://planet.suricata-ids.org/
+     http://suricata-ids.org/
+ Suricata IDS/IPS/NSM - Suricata is a high performance Intrusion Detection and Prevention System and Network Security Monitoring engine.
+ Open Source and owned by a community run non-profit foundation, the Open Information Security Foundation (OISF). Suricata is developed by the OISF, its supporting vendors and the community.
+ This Engine supports:
+     Multi-Threading - provides for extremely fast and flexible operation on multicore systems.
+     File Extraction, MD5 matching - over 4000 file types recognized and extracted from live traffic.
+     TLS/SSL certificate matching/logging
+     IEEE 802.1ad (QinQ) and IEEE 802.1Q (VLAN) support
+     All JSON output/logging capability
+     NSM runmode
+     Automatic Protocol Detection (IPv4/6, TCP, UDP, ICMP, HTTP, TLS, FTP, SMB, DNS )
+     Gzip Decompression
+     Fast IP Matching
+     Hardware acceleration on CUDA GPU cards
+ and many more great features -
+ http://suricata-ids.org/features/all-features/
+
+
+Package: suricata-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: suricata (= ${binary:Version}),     ${misc:Depends} 
+Description: Debug symbols for Suricata open source multi-thread IDS/IPS/NSM system.

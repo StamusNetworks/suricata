@@ -1,0 +1,337 @@
+suricata (2024020802-1) stamus; urgency=medium
+
+  * For U39.2.0 rc8
+
+ -- Eric Leblond <el@stamus-networks.com>  Thu, 08 Feb 2024 16:52:18 +0100
+
+suricata (2024011801-1) stamus; urgency=medium
+
+  * For U39.2.0 rc1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 18 Jan 2024 16:37:57 +0100
+
+suricata (2023110601-1) stamus; urgency=medium
+
+  * For U39.1.0 rc1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Mon, 06 Nov 2023 11:19:24 +0100
+
+suricata (2023062901-1) stamus; urgency=medium
+
+  * For U39.0.2 rc1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 29 Jun 2023 08:15:05 +0200
+
+suricata (2023052501-1) stamus; urgency=medium
+
+  * For U39.0.1 rc1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 25 May 2023 10:19:58 +0200
+
+suricata (2023030501-1) stamus; urgency=medium
+
+  * For U39.0.0 rc4
+
+ -- Eric Leblond <el@stamus-networks.com>  Sun, 05 Mar 2023 19:33:01 +0100
+
+suricata (2023020501-1) stamus; urgency=medium
+
+  * For U39.0.0 rc2
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Sun, 05 Feb 2023 22:59:46 +0100
+
+suricata (2023012001-1) stamus; urgency=medium
+
+  * For U39.0.0 rc1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Fri, 20 Jan 2023 09:10:51 +0100
+
+suricata (2023011301-2) stamus; urgency=medium
+
+  * For U39.0.0 beta6
+
+ -- Eric Leblond <el@stamus-networks.com>  Fri, 13 Jan 2023 10:58:02 +0100
+
+suricata (2022112401-1) stamus; urgency=medium
+
+  * For U39.0.0 beta4
+
+ -- Eric Leblond <el@stamus-networks.com>  Thu, 24 Nov 2022 10:23:09 +0100
+
+suricata (2022100601-1) stamus; urgency=medium
+
+  * For U39.0.0 beta2
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 06 Oct 2022 14:54:52 +0200
+
+suricata (2022090801-1) stamus; urgency=medium
+
+  * For U39.0.0 beta1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 08 Sep 2022 10:18:12 +0200
+
+suricata (2022032201-1) stamus; urgency=medium
+
+  * Prep for U38.1.0 
+
+ -- Eric Leblond <el@stamus-networks.com>  Tue, 22 Mar 2022 12:56:56 +0100
+
+suricata (2022021501-1) stamus; urgency=medium
+
+  * Add http.server logging in alerts
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Tue, 15 Feb 2022 00:04:12 +0100
+
+suricata (2022020101-1) stamus; urgency=medium
+
+  * Merge latest 6.0.x
+
+ -- Eric Leblond <el@stamus-networks.com>  Tue, 01 Feb 2022 17:54:36 +0100
+
+suricata (2022011301-1) stamus; urgency=medium
+
+  * For rc2
+  * dcerpc fixes
+  * new smb keywords
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 13 Jan 2022 16:01:29 +0100
+
+suricata (2022010601-1) stamus; urgency=medium
+
+  * For rc1 
+
+ -- Eric Leblond <el@stamus-networks.com>  Thu, 06 Jan 2022 02:59:01 +0100
+
+suricata (2021122001-1) stamus; urgency=medium
+
+  * SMB update
+  * SMTP url extraction update
+
+ -- Eric Leblond <el@stamus-networks.com>  Mon, 20 Dec 2021 08:34:41 +0100
+
+suricata (2021120901-1) stamus; urgency=medium
+
+  * dataset fix
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 09 Dec 2021 11:06:58 +0100
+
+suricata (2021120601-1) stamus; urgency=medium
+
+  * Fix smb ressource over use
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Mon, 06 Dec 2021 09:37:05 +0100
+
+suricata (2021112901-1) stamus; urgency=medium
+
+  * Fix event counter
+
+ -- Eric Leblond <el@stamus-networks.com>  Mon, 29 Nov 2021 09:44:15 +0100
+
+suricata (2021110801-1) stamus; urgency=medium
+
+  * Non-maintainer upload.
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Mon, 08 Nov 2021 13:11:15 +0100
+
+suricata (2021080401-1) stamus; urgency=medium
+
+  * Fix network info memleak
+
+ -- Eric Leblond <el@stamus-networks.com>  Wed, 04 Aug 2021 09:45:44 +0200
+
+suricata (2021072401-1) stamus; urgency=medium
+
+  * Fix network-info error
+
+ -- Eric Leblond <el@stamus-networks.com>  Sat, 24 Jul 2021 00:25:20 +0200
+
+suricata (2021071901-1) stamus; urgency=medium
+
+  * Add missing patches
+
+ -- Eric Leblond <el@stamus-networks.com>  Mon, 19 Jul 2021 15:02:30 +0200
+
+suricata (2021071201-1) stamus; urgency=medium
+
+  * Rebased with merge
+
+ -- Eric Leblond <el@stamus-networks.com>  Mon, 12 Jul 2021 22:03:09 +0200
+
+suricata (2021012001-1) stamus; urgency=medium
+
+  * 6.0 based
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Wed, 20 Jan 2021 23:23:57 +0100
+
+suricata (2020120101-1) stamus; urgency=medium
+
+  * Avoid crash at stop
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Tue, 01 Dec 2020 00:18:20 +0100
+
+suricata (2020100801-1) stamus; urgency=medium
+
+  * For rc3 with master merge
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 08 Oct 2020 15:31:20 +0200
+
+suricata (2020091701-1) stamus; urgency=medium
+
+  * Merge 5.0.X branch
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 17 Sep 2020 09:05:17 +0200
+
+suricata (2020091201-1) stamus; urgency=medium
+
+  * For upgrade 36
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Sat, 12 Sep 2020 10:20:07 +0200
+
+suricata (2020061101-1) stamus; urgency=medium
+
+  * Non-maintainer upload.
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 11 Jun 2020 15:46:42 +0200
+
+suricata (20200050501-1) stamus; urgency=medium
+
+  * Merging final 5.0.3
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Tue, 05 May 2020 09:21:36 +0200
+
+suricata (2020042001-1) stamus; urgency=medium
+
+  * Non-maintainer upload.
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Mon, 20 Apr 2020 10:31:21 +0200
+
+suricata (20200331-1) stamus; urgency=medium
+
+  * For u35.0.0
+  * Based on Suricata 5.0.x
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Tue, 31 Mar 2020 10:54:07 +0200
+
+suricata (20200123-1) stamus; urgency=medium
+
+  * For u34.1, redis reconnect fix 
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 23 Jan 2020 14:53:45 +0100
+
+suricata (20200116-1) stamus; urgency=medium
+
+  * For u34.1
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 16 Jan 2020 12:04:55 +0100
+
+suricata (20190629-1) stamus; urgency=medium
+
+  * For aws.
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Sat, 29 Jun 2019 11:27:38 +0200
+
+suricata (2018122201-1) stamus; urgency=medium
+
+  * For U32.1 based on upstream 4.1.2
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Sat, 22 Dec 2018 12:05:45 +0100
+
+suricata (2018122001-1) stamus; urgency=medium
+
+  * For U32.1 
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Thu, 20 Dec 2018 22:33:06 +0100
+
+suricata (2018110501-1) stamus; urgency=medium
+
+  * For U32
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Mon, 05 Nov 2018 11:30:31 +0100
+
+suricata (2018090501-1) stamus; urgency=medium
+
+  * Prepare new release.
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Wed, 05 Sep 2018 11:41:44 +0200
+
+suricata (2018082501-1) stamus; urgency=medium
+
+  * 4.1 based
+  * network info
+  * reject vlan
+
+ -- Eric Leblond <eleblond@stamus-networks.com>  Sat, 25 Aug 2018 10:56:01 +0200
+
+suricata (2017080701-1) stamus; urgency=medium
+
+  * 4.0 based
+
+ -- Eric Leblond <eric@tiger2>  Mon, 07 Aug 2017 15:02:45 +0200
+
+suricata (2016080701-1) stamus; urgency=medium
+
+  * Imported Upstream version 2016080701
+
+ -- Eric Leblond <eric@regit.org>  Sun, 07 Aug 2016 11:05:44 +0200
+
+suricata (2016062001-1) stamus; urgency=medium
+
+  * Imported Upstream version 2016062001
+
+ -- Eric Leblond <eric@regit.org>  Mon, 20 Jun 2016 15:07:02 +0200
+
+suricata (2016061302-1) stamus; urgency=medium
+
+  * Imported Upstream version 2016061302
+
+ -- Eric Leblond <eric@regit.org>  Thu, 16 Jun 2016 15:49:16 +0200
+
+suricata (2016011901-1) stamus; urgency=medium
+
+  * configure: set version to 3.0SN1
+
+ -- Eric Leblond <eric@regit.org>  Tue, 19 Jan 2016 23:52:18 +0100
+
+suricata (2016011401-1) stamus; urgency=medium
+
+  * Prepare debian source for quilt
+  * Add suricata.yaml.in quilt patch
+
+ -- Eric Leblond <eric@regit.org>  Tue, 19 Jan 2016 23:04:26 +0100
+
+suricata (2016010601) stamus; urgency=medium
+
+  [ Peter Manev ]
+  * Addjusting suricata.yaml config file
+  * Adding offloading scripts
+
+  [ pevma ]
+
+ -- pmanev <pmanev@stamus-networks.com>  Wed, 06 Jan 2016 16:08:03 +0100
+
+suricata (2016010405) stamus; urgency=medium
+
+  * Test2Release
+
+ -- pevma <pmanev@stamus-networks>  Mon, 04 Jan 2016 10:10:58 +0100
+
+suricata (2016010404) stamus; urgency=medium
+
+  [ Peter Manev ]
+  * Adusting rules file routines
+
+  [ root ]
+
+ -- root <root@DONPEDRO>  Mon, 04 Jan 2016 10:03:52 +0100
+
+suricata (2016010403) stamus; urgency=medium
+
+  * Test1Release
+
+ -- pevma <pmanev@stamus-networks.com>  Mon, 04 Jan 2016 09:57:29 +0100
+
+suricata (2016010301) stamus; urgency=low
+
+  * Initial Release.
+
+ -- root <pmanev@stamus-networks.com>  Sun, 03 Jan 2016 21:41:44 +0100
