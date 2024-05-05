@@ -170,6 +170,8 @@ void EveAddAppProto(Flow *f, JsonBuilder *js)
 {
     if (f->alproto) {
         jb_set_string(js, "app_proto", AppProtoToString(f->alproto));
+    } else {
+        jb_set_string(js, "app_proto", "unknown");
     }
     if (f->alproto_ts && f->alproto_ts != f->alproto) {
         jb_set_string(js, "app_proto_ts", AppProtoToString(f->alproto_ts));
