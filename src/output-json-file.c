@@ -183,8 +183,6 @@ JsonBuilder *JsonBuildFileInfoRecord(const Packet *p, const File *ff, void *tx,
             break;
     }
 
-    jb_set_string(js, "app_proto", AppProtoToString(p->flow->alproto));
-
     jb_open_object(js, "fileinfo");
     if (stored) {
         // the file has just been stored on disk cf OUTPUT_FILEDATA_FLAG_CLOSE

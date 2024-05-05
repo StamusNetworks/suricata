@@ -51,6 +51,7 @@
 
 #include "output.h"
 #include "output-json.h"
+#include "output-json-flow.h"
 
 #include "util-byte.h"
 #include "util-privs.h"
@@ -481,6 +482,9 @@ void EveAddCommonOptions(const OutputJsonCommonSettings *cfg, const Packet *p, c
     }
     if (f != NULL && f->tenant_id > 0) {
         jb_set_uint(js, "tenant_id", f->tenant_id);
+    }
+    if (f != NULL) {
+        EveAddAppProto(f, js);
     }
 }
 

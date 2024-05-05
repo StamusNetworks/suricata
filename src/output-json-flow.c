@@ -166,7 +166,7 @@ static JsonBuilder *CreateEveHeaderFromFlow(const Flow *f)
     return jb;
 }
 
-void EveAddAppProto(Flow *f, JsonBuilder *js)
+void EveAddAppProto(const Flow *f, JsonBuilder *js)
 {
     if (f->alproto) {
         jb_set_string(js, "app_proto", AppProtoToString(f->alproto));
@@ -219,7 +219,6 @@ void EveAddFlow(Flow *f, JsonBuilder *js)
 /* Eve format logging */
 static void EveFlowLogJSON(OutputJsonThreadCtx *aft, JsonBuilder *jb, Flow *f)
 {
-    EveAddAppProto(f, jb);
     jb_open_object(jb, "flow");
     EveAddFlow(f, jb);
 
