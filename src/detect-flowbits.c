@@ -56,6 +56,7 @@ static DetectParseRegex parse_regex;
 int DetectFlowbitMatch (DetectEngineThreadCtx *, Packet *,
         const Signature *, const SigMatchCtx *);
 static int DetectFlowbitSetup (DetectEngineCtx *, Signature *, const char *);
+static int DetectStreambitSetup (DetectEngineCtx *, Signature *, const char *);
 static int FlowbitOrAddData(DetectEngineCtx *, DetectFlowbitsData *, char *);
 void DetectFlowbitFree (DetectEngineCtx *, void *);
 #ifdef UNITTESTS
@@ -75,6 +76,13 @@ void DetectFlowbitsRegister (void)
 #endif
     /* this is compatible to ip-only signatures */
     sigmatch_table[DETECT_FLOWBITS].flags |= SIGMATCH_IPONLY_COMPAT;
+
+    sigmatch_table[DETECT_STREAMBITS].name = "streambits";
+    sigmatch_table[DETECT_STREAMBITS].desc = "operate on flow flag";
+    sigmatch_table[DETECT_STREAMBITS].url = "/rules/flow-keywords.html#flowbits";
+    sigmatch_table[DETECT_STREAMBITS].Match = DetectFlowbitMatch;
+    sigmatch_table[DETECT_STREAMBITS].Setup = DetectStreambitSetup;
+    sigmatch_table[DETECT_STREAMBITS].Free  = DetectFlowbitFree;
 
     DetectSetupParseRegexes(PARSE_REGEX, &parse_regex);
 }
@@ -129,63 +137,50 @@ static int FlowbitOrAddData(DetectEngineCtx *de_ctx, DetectFlowbitsData *cd, cha
     return 1;
 }
 
-static int DetectFlowbitMatchToggle (Packet *p, const DetectFlowbitsData *fd)
+static int DetectFlowbitMatchToggle (Flow *f, const DetectFlowbitsData *fd)
 {
-    if (p->flow == NULL)
-        return 0;
-
-    FlowBitToggle(p->flow,fd->idx);
+    FlowBitToggle(f, fd->idx);
 
     return 1;
 }
 
-static int DetectFlowbitMatchUnset (Packet *p, const DetectFlowbitsData *fd)
+static int DetectFlowbitMatchUnset (Flow *f, const DetectFlowbitsData *fd)
 {
-    if (p->flow == NULL)
-        return 0;
-
-    FlowBitUnset(p->flow,fd->idx);
+    FlowBitUnset(f, fd->idx);
 
     return 1;
 }
 
-static int DetectFlowbitMatchSet (Packet *p, const DetectFlowbitsData *fd)
+static int DetectFlowbitMatchSet (Flow *f, const DetectFlowbitsData *fd)
 {
-    if (p->flow == NULL)
-        return 0;
-
-    FlowBitSet(p->flow,fd->idx);
+    FlowBitSet(f, fd->idx);
 
     return 1;
 }
 
-static int DetectFlowbitMatchIsset (Packet *p, const DetectFlowbitsData *fd)
+static int DetectFlowbitMatchIsset (Flow *f, const DetectFlowbitsData *fd)
 {
-    if (p->flow == NULL)
-        return 0;
     if (fd->or_list_size > 0) {
         for (uint8_t i = 0; i < fd->or_list_size; i++) {
-            if (FlowBitIsset(p->flow, fd->or_list[i]) == 1)
+            if (FlowBitIsset(f, fd->or_list[i]) == 1)
                 return 1;
         }
         return 0;
     }
 
-    return FlowBitIsset(p->flow,fd->idx);
+    return FlowBitIsset(f, fd->idx);
 }
 
-static int DetectFlowbitMatchIsnotset (Packet *p, const DetectFlowbitsData *fd)
+static int DetectFlowbitMatchIsnotset (Flow *f, const DetectFlowbitsData *fd)
 {
-    if (p->flow == NULL)
-        return 0;
     if (fd->or_list_size > 0) {
         for (uint8_t i = 0; i < fd->or_list_size; i++) {
-            if (FlowBitIsnotset(p->flow, fd->or_list[i]) == 1)
+            if (FlowBitIsnotset(f, fd->or_list[i]) == 1)
                 return 1;
         }
         return 0;
     }
-    return FlowBitIsnotset(p->flow,fd->idx);
+    return FlowBitIsnotset(f, fd->idx);
 }
 
 /*
@@ -194,30 +189,45 @@ static int DetectFlowbitMatchIsnotset (Packet *p, const DetectFlowbitsData *fd)
  *        -1: error
  */
 
-int DetectFlowbitMatch (DetectEngineThreadCtx *det_ctx, Packet *p,
+static int DetectFlowbitMatchFlow (DetectEngineThreadCtx *det_ctx, Flow *f,
         const Signature *s, const SigMatchCtx *ctx)
 {
     const DetectFlowbitsData *fd = (const DetectFlowbitsData *)ctx;
     if (fd == NULL)
         return 0;
 
+    if (f == NULL)
+        return 0;
+
     switch (fd->cmd) {
         case DETECT_FLOWBITS_CMD_ISSET:
-            return DetectFlowbitMatchIsset(p,fd);
+            return DetectFlowbitMatchIsset(f, fd);
         case DETECT_FLOWBITS_CMD_ISNOTSET:
-            return DetectFlowbitMatchIsnotset(p,fd);
+            return DetectFlowbitMatchIsnotset(f, fd);
         case DETECT_FLOWBITS_CMD_SET:
-            return DetectFlowbitMatchSet(p,fd);
+            return DetectFlowbitMatchSet(f, fd);
         case DETECT_FLOWBITS_CMD_UNSET:
-            return DetectFlowbitMatchUnset(p,fd);
+            return DetectFlowbitMatchUnset(f, fd);
         case DETECT_FLOWBITS_CMD_TOGGLE:
-            return DetectFlowbitMatchToggle(p,fd);
+            return DetectFlowbitMatchToggle(f, fd);
         default:
             SCLogError("unknown cmd %" PRIu32 "", fd->cmd);
             return 0;
     }
 
     return 0;
+}
+
+int DetectFlowbitMatch (DetectEngineThreadCtx *det_ctx, Packet *p,
+        const Signature *s, const SigMatchCtx *ctx)
+{
+    return DetectFlowbitMatchFlow(det_ctx, p->flow, s, ctx);
+}
+
+int DetectFlowbitDoMatch (DetectEngineThreadCtx *det_ctx, Packet *p, Flow *f,
+        const Signature *s, const SigMatchCtx *ctx)
+{
+    return DetectFlowbitMatchFlow(det_ctx, f, s, ctx);
 }
 
 static int DetectFlowbitParse(const char *str, char *cmd, int cmd_len, char *name,
@@ -274,7 +284,7 @@ error:
     return 0;
 }
 
-int DetectFlowbitSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
+static int DetectStarbitSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr, bool on_data)
 {
     DetectFlowbitsData *cd = NULL;
     SigMatch *sm = NULL;
@@ -350,7 +360,11 @@ int DetectFlowbitSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawst
         case DETECT_FLOWBITS_CMD_ISNOTSET:
         case DETECT_FLOWBITS_CMD_ISSET:
             /* checks, so packet list */
-            SigMatchAppendSMToList(s, sm, DETECT_SM_LIST_MATCH);
+            if (on_data) {
+                SigMatchAppendSMToList(s, sm, DETECT_SM_LIST_PMATCH);
+            } else {
+                SigMatchAppendSMToList(s, sm, DETECT_SM_LIST_MATCH);
+            }
             break;
 
         case DETECT_FLOWBITS_CMD_SET:
@@ -374,6 +388,16 @@ error:
     if (sm != NULL)
         SCFree(sm);
     return -1;
+}
+
+int DetectFlowbitSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
+{
+    return DetectStarbitSetup(de_ctx, s, rawstr, false);
+}
+
+int DetectStreambitSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
+{
+    return DetectStarbitSetup(de_ctx, s, rawstr, true);
 }
 
 void DetectFlowbitFree (DetectEngineCtx *de_ctx, void *ptr)

@@ -23,6 +23,7 @@
  * Performs content inspection on any buffer supplied.
  */
 
+#include "detect-engine-register.h"
 #include "suricata-common.h"
 #include "suricata.h"
 
@@ -49,6 +50,7 @@
 #include "detect-base64-data.h"
 #include "detect-dataset.h"
 #include "detect-datarep.h"
+#include "detect-flowbits.h"
 
 #include "util-spm.h"
 #include "util-debug.h"
@@ -683,6 +685,11 @@ uint8_t DetectEngineContentInspection(DetectEngineCtx *de_ctx, DetectEngineThrea
                 }
             }
         }
+    } else if (smd->type == DETECT_FLOWBITS) {
+        if (DetectFlowbitDoMatch(det_ctx, p, f, s, smd->ctx) != 1) {
+            goto no_match;
+        }
+        goto match;
     } else {
         SCLogDebug("sm->type %u", smd->type);
 #ifdef DEBUG

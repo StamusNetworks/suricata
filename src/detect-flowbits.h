@@ -41,6 +41,8 @@ typedef struct DetectFlowbitsData_ {
 
 /* prototypes */
 void DetectFlowbitsRegister (void);
+int DetectFlowbitDoMatch(DetectEngineThreadCtx *det_ctx, Packet *p, Flow *f,
+        const Signature *s, const SigMatchCtx *ctx);
 
 #endif /* __DETECT_FLOWBITS_H__ */
 

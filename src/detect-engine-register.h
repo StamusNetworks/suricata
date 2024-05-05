@@ -343,6 +343,7 @@ enum DetectKeywordId {
 
     DETECT_AL_JA4_HASH,
     DETECT_FILE_MIMETYPE,
+    DETECT_STREAMBITS,
 
     /* make sure this stays last */
     DETECT_TBLSIZE,
