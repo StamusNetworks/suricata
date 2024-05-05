@@ -1,3 +1,10 @@
+suricata (2024050501-1) stamus; urgency=medium
+
+  * For U40.0.0
+  * Suricata 7 based
+
+ -- Eric Leblond <el@stamus-networks.com>  Sun, 05 May 2024 23:13:02 +0200
+
 suricata (2024020802-1) stamus; urgency=medium
 
   * For U39.2.0 rc8
