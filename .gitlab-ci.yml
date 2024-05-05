@@ -1,0 +1,88 @@
+default:
+  tags:
+  - aws
+
+image: regit/suricata-build
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+before_script:
+  - git clone https://github.com/OISF/libhtp.git -b 0.5.x --depth 1
+
+stages:
+  - test
+  - pkg
+
+Debian-asan-verify:
+  image: pevma/sqard:debian-buster
+  stage: test
+  script:
+  - rustup toolchain uninstall stable
+  - rustup toolchain install stable
+  - apt-get update || true
+  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev libgeoip-dev libluajit-5.1-dev libelf-dev coccinelle
+  - ./autogen.sh
+  - ./configure CC=clang --enable-unittests CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fsanitize=address -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-geoip --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
+  - make -j4
+  - cp src/.libs/suricata suricata.asan
+  - python3 ./qa/suricata-verify/run.py -q
+  artifacts:
+    paths:
+    - "suricata.asan"
+    expire_in: 1 week
+
+Unittests-coccinelle:
+  image: pevma/sqard:debian-buster
+  stage: test
+  script:
+  - rustup toolchain uninstall stable
+  - rustup toolchain install stable
+  - ln -s /usr/bin/python3 /usr/bin/python || true
+  - apt-get update || true
+  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev libgeoip-dev libluajit-5.1-dev libelf-dev coccinelle parallel
+  - ./autogen.sh
+  - ./configure CC=clang --enable-unittests --enable-coccinelle CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-geoip --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
+  - make -j4
+  - CONCURRENCY_LEVEL=4 make check -j4
+
+build-pkg:
+  image: pevma/sqard:debian-buster
+  stage: pkg
+  artifacts:
+    paths:
+    - "*.deb"
+
+  script:
+  - apt-get update || true
+  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev devscripts libgeoip-dev libluajit-5.1-dev libelf-dev
+  - dpkg -r coccinelle || true
+  - rustup toolchain uninstall stable
+  - rustup toolchain install stable
+  - head -n 1 "$CI_PROJECT_DIR/debian/changelog" | sed -e 's/^suricata (\([^)]*\).*$/\1/' > /tmp/deb-version
+  - sed -e 's/-.*//' < /tmp/deb-version > /tmp/src-version
+
+  # When a tag is defined, use changelogs infos by default
+  # otherwise, update changelog version:
+  - test "$CI_COMMIT_TAG" || echo "$(cat /tmp/src-version)-$(date +%Y%m%d)" > /tmp/src-version
+  - test "$CI_COMMIT_TAG" || echo "$(cat /tmp/src-version)-${CI_COMMIT_SHA:0:8}" > /tmp/deb-version
+  - test "$CI_COMMIT_TAG" || sed -e "1!b;s/(\([^)]*\))/($(cat /tmp/deb-version))/" -i "$CI_PROJECT_DIR/debian/changelog"
+
+  - cd "$CI_PROJECT_DIR" && debuild --no-tgz-check --prepend-path=/root/.cargo/bin -- binary
+  - mv "$CI_PROJECT_DIR/../suricata_$(cat /tmp/deb-version)_amd64.deb" "$CI_PROJECT_DIR/"
+
+  # Pass the package to stamus-install
+  - test "$CI_PROJECT_NAMESPACE" = "devel" || exit 0
+  - echo "$CI_COMMIT_REF_NAME" | grep -q '^stamus-[0-9.]*-' || exit 0
+  - export UPGRADE_NO="$(echo "$CI_COMMIT_REF_NAME" | sed -e "s/^stamus-\([0-9.]*\)-.*/\1/")"
+
+  - eval $(ssh-agent -s)
+  # Add the SSH key stored in SSH_PRIVATE_KEY variable to the agent store
+  - ssh-add <(echo "$SSH_PRIVATE_KEY")
+  - mkdir /root/.ssh || true
+  - ssh-keyscan -H $GITLAB_RUNNER > /root/.ssh/known_hosts
+  - ssh gitlab@$GITLAB_RUNNER mkdir -p "/home/gitlab/packages/suricata/$UPGRADE_NO/commits"
+  - ssh gitlab@$GITLAB_RUNNER mkdir -p "/home/gitlab/packages/suricata/$UPGRADE_NO/tags"
+  - test "$CI_COMMIT_TAG" || scp "$CI_PROJECT_DIR/suricata_$(cat /tmp/deb-version)_amd64.deb" gitlab@$GITLAB_RUNNER:"/home/gitlab/packages/suricata/$UPGRADE_NO/commits"
+  - test "$CI_COMMIT_TAG" || exit 0
+  - scp "$CI_PROJECT_DIR/suricata_$(cat /tmp/deb-version)_amd64.deb" gitlab@$GITLAB_RUNNER:"/home/gitlab/packages/suricata/$UPGRADE_NO/tags"
