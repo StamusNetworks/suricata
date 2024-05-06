@@ -6,6 +6,9 @@
         "timestamp"
     ],
     "properties": {
+        "alerted": {
+            "type": "boolean"
+        },
         "app_proto": {
             "type": "string"
         },
@@ -1700,6 +1703,9 @@
                     "type": "string"
                 },
                 "redirect": {
+                    "type": "string"
+                },
+                "server": {
                     "type": "string"
                 },
                 "status": {
@@ -3733,6 +3739,28 @@
                         "kernel_ifdrops": {
                             "type": "integer"
                         }
+                    }
+                },
+                "json": {
+                    "type": "object",
+                    "properties": {
+                          "json": {
+                              "events": {
+                                "type": "integer"
+                              },
+                              "bytes": {
+                                "type": "integer"
+                              },
+                              "min_size": {
+                                "type": "integer"
+                              },
+                              "max_size": {
+                                "type": "integer"
+                              },
+                              "avg_size": {
+                                "type": "integer"
+                              }
+                          }
                     }
                 },
                 "memcap_pressure": {
