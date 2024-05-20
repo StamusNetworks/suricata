@@ -569,7 +569,6 @@ bool EveHttpAddMetadata(const Flow *f, uint64_t tx_id, JsonBuilder *js)
 
 void EveHttpLogAllJSONHeaders(JsonBuilder *js, Flow *f, uint64_t tx_id)
 {
-
     HtpState *htp_state = (HtpState *)FlowGetAppState(f);
     if (htp_state) {
         htp_tx_t *tx = AppLayerParserGetTx(IPPROTO_TCP, ALPROTO_HTTP1, htp_state, tx_id);
