@@ -76,6 +76,7 @@ typedef struct JsonHttpLogThread_ {
 #define LOG_HTTP_ARRAY 4 /* require array handling */
 #define LOG_HTTP_REQ_HEADERS 8
 #define LOG_HTTP_RES_HEADERS 16
+#define LOG_HTTP_NAME_VALUE 32
 
 typedef enum {
     HTTP_FIELD_ACCEPT = 0,
@@ -483,13 +484,15 @@ static void EveHttpLogJSON(JsonHttpLogThread *aft, JsonBuilder *js, Flow * f, ht
 
     EveHttpLogJSONBasic(js, tx);
     /* log custom fields if configured */
-    if (http_ctx->fields != 0)
+    if ((!(http_ctx->flags & LOG_HTTP_NAME_VALUE)) && (http_ctx->fields != 0))
         EveHttpLogJSONCustom(http_ctx, js, tx);
     if (http_ctx->flags & LOG_HTTP_EXTENDED)
         EveHttpLogJSONExtended(js, tx);
-    if (http_ctx->flags & LOG_HTTP_REQ_HEADERS || http_ctx->fields != 0)
+    if (http_ctx->flags & LOG_HTTP_REQ_HEADERS ||
+            ((http_ctx->flags & LOG_HTTP_NAME_VALUE) && (http_ctx->fields != 0)))
         EveHttpLogJSONHeaders(js, LOG_HTTP_REQ_HEADERS, tx, http_ctx);
-    if (http_ctx->flags & LOG_HTTP_RES_HEADERS || http_ctx->fields != 0)
+    if (http_ctx->flags & LOG_HTTP_RES_HEADERS ||
+            ((http_ctx->flags & LOG_HTTP_NAME_VALUE) && (http_ctx->fields != 0)))
         EveHttpLogJSONHeaders(js, LOG_HTTP_RES_HEADERS, tx, http_ctx);
 
     jb_close(js);
@@ -616,6 +619,16 @@ static OutputInitResult OutputHttpLogInitSub(ConfNode *conf, OutputCtx *parent_c
                 http_ctx->flags = LOG_HTTP_EXTENDED;
             }
         }
+
+        const char *name_value = ConfNodeLookupChildValue(conf, "name-value-headers");
+        if (name_value != NULL) {
+            if (ConfValIsTrue(name_value)) {
+                http_ctx->flags |= LOG_HTTP_NAME_VALUE;
+            }
+        } else {
+            http_ctx->flags |= LOG_HTTP_NAME_VALUE;
+        }
+
 
         const char *all_headers = ConfNodeLookupChildValue(conf, "dump-all-headers");
         if (all_headers != NULL) {

@@ -177,9 +177,6 @@ static JsonBuilder *CreateEveHeaderFromNetFlow(const Flow *f, int dir)
 /* JSON format logging */
 static void NetFlowLogEveToServer(JsonBuilder *js, Flow *f)
 {
-    jb_set_string(js, "app_proto",
-            AppProtoToString(f->alproto_ts ? f->alproto_ts : f->alproto));
-
     jb_open_object(js, "netflow");
 
     jb_set_uint(js, "pkts", f->todstpktcnt);
@@ -221,9 +218,6 @@ static void NetFlowLogEveToServer(JsonBuilder *js, Flow *f)
 
 static void NetFlowLogEveToClient(JsonBuilder *js, Flow *f)
 {
-    jb_set_string(js, "app_proto",
-            AppProtoToString(f->alproto_tc ? f->alproto_tc : f->alproto));
-
     jb_open_object(js, "netflow");
 
     jb_set_uint(js, "pkts", f->tosrcpktcnt);
