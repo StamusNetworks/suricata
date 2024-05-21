@@ -23,7 +23,7 @@ Debian-asan-verify:
   - apt-get update || true
   - apt-get -y install libevent-dev libhiredis-dev libbpf-dev libgeoip-dev libluajit-5.1-dev libelf-dev coccinelle
   - ./autogen.sh
-  - ./configure CC=clang --enable-unittests CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fsanitize=address -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-geoip --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
+  - ./configure CC=clang --enable-unittests CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fsanitize=address -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
   - make -j4
   - cp src/.libs/suricata suricata.asan
   - python3 ./qa/suricata-verify/run.py -q
@@ -42,7 +42,7 @@ Unittests-coccinelle:
   - apt-get update || true
   - apt-get -y install libevent-dev libhiredis-dev libbpf-dev libgeoip-dev libluajit-5.1-dev libelf-dev coccinelle parallel
   - ./autogen.sh
-  - ./configure CC=clang --enable-unittests --enable-coccinelle CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-geoip --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
+  - ./configure CC=clang --enable-unittests --enable-coccinelle CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
   - make -j4
   - CONCURRENCY_LEVEL=4 make check -j4
 
