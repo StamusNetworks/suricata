@@ -1,0 +1,4 @@
+[submodule "qa/suricata-verify"]
+	path = qa/suricata-verify
+	url = https://git.stamus-networks.com/devel/suricata-verify.git
+	branch = stamus
