@@ -696,6 +696,8 @@ static DetectPcreData *DetectPcreParse (DetectEngineCtx *de_ctx,
     pcre2_match_data_free(match);
     /* store the pcre string */
     pd->pcre_str = SCStrdup(regexstr);
+    if (pd->pcre_str == NULL)
+        return pd;
 
     return pd;
 
