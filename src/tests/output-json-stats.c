@@ -66,8 +66,8 @@ static int OutputJsonStatsTest01(void)
 
 static int OutputJsonStatsTest02(void)
 {
-    StatsRecord total_records[4] = { 0 };
-    StatsRecord thread_records[8] = { 0 };
+    StatsRecord total_records[4] = { { 0 } };
+    StatsRecord thread_records[8] = { { 0 } };
 
     // Totals
     total_records[0].name = "tcp.syn";
