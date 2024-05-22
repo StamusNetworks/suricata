@@ -70,6 +70,7 @@ build-pkg:
 
   - cd "$CI_PROJECT_DIR" && debuild --no-tgz-check --prepend-path=/root/.cargo/bin -- binary
   - mv "$CI_PROJECT_DIR/../suricata_$(cat /tmp/deb-version)_amd64.deb" "$CI_PROJECT_DIR/"
+  - mv "$CI_PROJECT_DIR/../suricata-dbg_$(cat /tmp/deb-version)_amd64.deb" "$CI_PROJECT_DIR/"
 
   # Pass the package to stamus-install
   - test "$CI_PROJECT_NAMESPACE" = "devel" || exit 0
