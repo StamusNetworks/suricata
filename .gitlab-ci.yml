@@ -2,63 +2,66 @@ default:
   tags:
   - aws
 
-image: regit/suricata-build
+image: debian:bookworm
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 before_script:
+  - apt-get update || true
+  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev devscripts libgeoip-dev libluajit-5.1-dev libelf-dev curl python3
+    clang flex bison git wget jq python-is-python3
+    build-essential autoconf automake libtool pkg-config libc6-dev
+    libpcre2-dev
+    libpcre3-dev  libpcap-dev
+    libnet1-dev libyaml-dev zlib1g-dev
+    libcap-ng-dev
+    libjansson-dev libmaxminddb-dev libnss3-dev libnspr4-dev
+    liblua5.1-0-dev libmagic-dev liblz4-dev python3-distutils-extra liblzma-dev
+    libhiredis-dev
+    libhyperscan-dev
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  -  . "$HOME/.cargo/env"
+  - cargo install --force cbindgen@^0.26
   - git clone https://github.com/OISF/libhtp.git -b 0.5.x --depth 1
+
 
 stages:
   - test
   - pkg
 
 Debian-asan-verify:
-  image: pevma/sqard:debian-buster
   stage: test
   script:
-  - rustup toolchain uninstall stable
-  - rustup toolchain install stable
-  - apt-get update || true
-  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev libgeoip-dev libluajit-5.1-dev libelf-dev coccinelle
   - ./autogen.sh
   - ./configure CC=clang --enable-unittests CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fsanitize=address -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
   - make -j4
   - cp src/.libs/suricata suricata.asan
+  - src/suricata --build-info > "build-info.txt"
   - python3 ./qa/suricata-verify/run.py -q
   artifacts:
     paths:
     - "suricata.asan"
+    - "build-info.txt"
     expire_in: 1 week
+    when: always
 
 Unittests-coccinelle:
-  image: pevma/sqard:debian-buster
   stage: test
   script:
-  - rustup toolchain uninstall stable
-  - rustup toolchain install stable
-  - ln -s /usr/bin/python3 /usr/bin/python || true
-  - apt-get update || true
-  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev libgeoip-dev libluajit-5.1-dev libelf-dev coccinelle parallel
+  - apt-get -y install coccinelle parallel libpython3-dev
   - ./autogen.sh
   - ./configure CC=clang --enable-unittests --enable-coccinelle CFLAGS="-O0 -ggdb3 -Werror -Wchar-subscripts -fno-strict-aliasing -fstack-protector-all -fno-omit-frame-pointer -Wno-unused-parameter -Wno-unused-function" --prefix=/usr/ --sysconfdir=/etc/ --localstatedir=/var/ --disable-gccmarch-native --enable-hiredis --enable-pie --with-libnss-libraries=/usr/lib --with-libnss-includes=/usr/include/nss/ --with-libnspr-libraries=/usr/lib --with-libnspr-includes=/usr/include/nspr --enable-luajit --enable-ebpf --with-libevent-includes=/usr/include/event2 --with-libevent-libraries=/usr/lib/x86_64-linux-gnu/ ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes
   - make -j4
   - CONCURRENCY_LEVEL=4 make check -j4
 
 build-pkg:
-  image: pevma/sqard:debian-buster
   stage: pkg
   artifacts:
     paths:
     - "*.deb"
 
   script:
-  - apt-get update || true
-  - apt-get -y install libevent-dev libhiredis-dev libbpf-dev devscripts libgeoip-dev libluajit-5.1-dev libelf-dev
-  - dpkg -r coccinelle || true
-  - rustup toolchain uninstall stable
-  - rustup toolchain install stable
   - head -n 1 "$CI_PROJECT_DIR/debian/changelog" | sed -e 's/^suricata (\([^)]*\).*$/\1/' > /tmp/deb-version
   - sed -e 's/-.*//' < /tmp/deb-version > /tmp/src-version
 
