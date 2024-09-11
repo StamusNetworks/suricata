@@ -1,6 +1,6 @@
 default:
   tags:
-  - aws
+  - k8s
 
 image: debian:bookworm
 
