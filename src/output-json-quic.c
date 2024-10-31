@@ -99,7 +99,7 @@ static OutputInitResult OutputQuicLogInitSub(ConfNode *conf, OutputCtx *parent_c
     }
 
     /* In 7.0.x, ja4 hash is only logged when requested */
-    quiclog_ctx->log_ja4 = false;
+    quiclog_ctx->log_ja4 = true;
     const char *ja4 = ConfNodeLookupChildValue(conf, "ja4");
     if (ja4 && ConfValIsTrue(ja4)) {
         quiclog_ctx->log_ja4 = true;

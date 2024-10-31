@@ -595,6 +595,8 @@ static OutputTlsCtx *OutputTlsInitCtx(ConfNode *conf)
         tls_ctx->fields |= LOG_TLS_FIELD_JA4;
     }
 
+    tls_ctx->fields |= LOG_TLS_FIELD_JA4;
+
     const char *session_resumption = ConfNodeLookupChildValue(conf, "session-resumption");
     if (session_resumption == NULL || ConfValIsTrue(session_resumption)) {
         tls_ctx->flags |= LOG_TLS_SESSION_RESUMPTION;
