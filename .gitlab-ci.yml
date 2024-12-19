@@ -1,6 +1,6 @@
 default:
   tags:
-  - k8s
+  - k8s-big
 
 image: debian:bookworm
 
