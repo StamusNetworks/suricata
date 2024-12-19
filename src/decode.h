@@ -281,6 +281,8 @@ typedef struct PacketAlert_ {
 #define PACKET_ALERT_RATE_FILTER_MODIFIED   0x10
 /** alert is in a frame, frame_id set */
 #define PACKET_ALERT_FLAG_FRAME 0x20
+/** alert in a tx was forced */
+#define PACKET_ALERT_FLAG_TX_GUESSED 0x040
 
 extern uint16_t packet_alert_max;
 #define PACKET_ALERT_MAX 15
@@ -402,6 +404,7 @@ enum PacketDropReason {
     PKT_DROP_REASON_STREAM_MEMCAP,
     PKT_DROP_REASON_STREAM_MIDSTREAM,
     PKT_DROP_REASON_STREAM_REASSEMBLY,
+    PKT_DROP_REASON_STREAM_URG,
     PKT_DROP_REASON_NFQ_ERROR,    /**< no nfq verdict, must be error */
     PKT_DROP_REASON_INNER_PACKET, /**< drop issued by inner (tunnel) packet */
     PKT_DROP_REASON_MAX,
@@ -686,6 +689,7 @@ typedef struct DecodeThreadVars_
     uint16_t counter_tcp_syn;
     uint16_t counter_tcp_synack;
     uint16_t counter_tcp_rst;
+    uint16_t counter_tcp_urg;
     uint16_t counter_udp;
     uint16_t counter_icmpv4;
     uint16_t counter_icmpv6;

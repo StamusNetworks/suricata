@@ -398,8 +398,14 @@ pub fn dns_print_addr(addr: &[u8]) -> std::string::String {
 fn dns_log_soa(soa: &DNSRDataSOA) -> Result<JsonBuilder, JsonError> {
     let mut js = JsonBuilder::try_new_object()?;
 
-    js.set_string_from_bytes("mname", &soa.mname)?;
-    js.set_string_from_bytes("rname", &soa.rname)?;
+    js.set_string_from_bytes("mname", &soa.mname.value)?;
+    if soa.mname.flags.contains(DNSNameFlags::TRUNCATED) {
+        js.set_bool("mname_truncated", true)?;
+    }
+    js.set_string_from_bytes("rname", &soa.rname.value)?;
+    if soa.rname.flags.contains(DNSNameFlags::TRUNCATED) {
+        js.set_bool("rname_truncated", true)?;
+    }
     js.set_uint("serial", soa.serial as u64)?;
     js.set_uint("refresh", soa.refresh as u64)?;
     js.set_uint("retry", soa.retry as u64)?;
@@ -434,7 +440,7 @@ fn dns_log_srv(srv: &DNSRDataSRV) -> Result<JsonBuilder, JsonError> {
     js.set_uint("priority", srv.priority as u64)?;
     js.set_uint("weight", srv.weight as u64)?;
     js.set_uint("port", srv.port as u64)?;
-    js.set_string_from_bytes("name", &srv.target)?;
+    js.set_string_from_bytes("name", &srv.target.value)?;
 
     js.close()?;
     return Ok(js);
@@ -443,7 +449,10 @@ fn dns_log_srv(srv: &DNSRDataSRV) -> Result<JsonBuilder, JsonError> {
 fn dns_log_json_answer_detail(answer: &DNSAnswerEntry) -> Result<JsonBuilder, JsonError> {
     let mut jsa = JsonBuilder::try_new_object()?;
 
-    jsa.set_string_from_bytes("rrname", &answer.name)?;
+    jsa.set_string_from_bytes("rrname", &answer.name.value)?;
+    if answer.name.flags.contains(DNSNameFlags::TRUNCATED) {
+        jsa.set_bool("rrname_truncated", true)?;
+    }
     jsa.set_string("rrtype", &dns_rrtype_string(answer.rrtype))?;
     jsa.set_uint("ttl", answer.ttl as u64)?;
 
@@ -451,12 +460,13 @@ fn dns_log_json_answer_detail(answer: &DNSAnswerEntry) -> Result<JsonBuilder, Js
         DNSRData::A(addr) | DNSRData::AAAA(addr) => {
             jsa.set_string("rdata", &dns_print_addr(addr))?;
         }
-        DNSRData::CNAME(bytes)
-        | DNSRData::MX(bytes)
-        | DNSRData::NS(bytes)
-        | DNSRData::TXT(bytes)
-        | DNSRData::NULL(bytes)
-        | DNSRData::PTR(bytes) => {
+        DNSRData::CNAME(name) | DNSRData::MX(name) | DNSRData::NS(name) | DNSRData::PTR(name) => {
+            jsa.set_string_from_bytes("rdata", &name.value)?;
+            if name.flags.contains(DNSNameFlags::TRUNCATED) {
+                jsa.set_bool("rdata_truncated", true)?;
+            }
+        }
+        DNSRData::TXT(bytes) | DNSRData::NULL(bytes) => {
             jsa.set_string_from_bytes("rdata", bytes)?;
         }
         DNSRData::SOA(soa) => {
@@ -507,7 +517,10 @@ fn dns_log_json_answer(
     js.set_uint("opcode", opcode as u64)?;
 
     if let Some(query) = response.queries.first() {
-        js.set_string_from_bytes("rrname", &query.name)?;
+        js.set_string_from_bytes("rrname", &query.name.value)?;
+        if query.name.flags.contains(DNSNameFlags::TRUNCATED) {
+            js.set_bool("rrname_truncated", true)?;
+        }
         js.set_string("rrtype", &dns_rrtype_string(query.rrtype))?;
     }
     js.set_string("rcode", &dns_rcode_string(header.flags))?;
@@ -530,12 +543,20 @@ fn dns_log_json_answer(
                             a.append_string(&dns_print_addr(addr))?;
                         }
                     }
-                    DNSRData::CNAME(bytes)
-                    | DNSRData::MX(bytes)
-                    | DNSRData::NS(bytes)
-                    | DNSRData::TXT(bytes)
-                    | DNSRData::NULL(bytes)
-                    | DNSRData::PTR(bytes) => {
+                    DNSRData::CNAME(name)
+                    | DNSRData::MX(name)
+                    | DNSRData::NS(name)
+                    | DNSRData::PTR(name) => {
+                        // Flags like truncated not logged here as it would break the schema.
+                        if !answer_types.contains_key(&type_string) {
+                            answer_types
+                                .insert(type_string.to_string(), JsonBuilder::try_new_array()?);
+                        }
+                        if let Some(a) = answer_types.get_mut(&type_string) {
+                            a.append_string_from_bytes(&name.value)?;
+                        }
+                    }
+                    DNSRData::TXT(bytes) | DNSRData::NULL(bytes) => {
                         if !answer_types.contains_key(&type_string) {
                             answer_types.insert(type_string.to_string(), JsonBuilder::try_new_array()?);
                         }
@@ -614,7 +635,10 @@ fn dns_log_query(
             if dns_log_rrtype_enabled(query.rrtype, flags) {
                 jb.set_string("type", "query")?;
                 jb.set_uint("id", request.header.tx_id as u64)?;
-                jb.set_string_from_bytes("rrname", &query.name)?;
+                jb.set_string_from_bytes("rrname", &query.name.value)?;
+                if query.name.flags.contains(DNSNameFlags::TRUNCATED) {
+                    jb.set_bool("rrname_truncated", true)?;
+                }
                 jb.set_string("rrtype", &dns_rrtype_string(query.rrtype))?;
                 jb.set_uint("tx_id", tx.id - 1)?;
                 if request.header.flags & 0x0040 != 0 {

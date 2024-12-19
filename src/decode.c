@@ -541,6 +541,7 @@ void DecodeRegisterPerfCounters(DecodeThreadVars *dtv, ThreadVars *tv)
     dtv->counter_tcp_syn = StatsRegisterCounter("tcp.syn", tv);
     dtv->counter_tcp_synack = StatsRegisterCounter("tcp.synack", tv);
     dtv->counter_tcp_rst = StatsRegisterCounter("tcp.rst", tv);
+    dtv->counter_tcp_urg = StatsRegisterCounter("tcp.urg", tv);
 
     dtv->counter_udp = StatsRegisterCounter("decoder.udp", tv);
     dtv->counter_sctp = StatsRegisterCounter("decoder.sctp", tv);
@@ -803,6 +804,8 @@ const char *PacketDropReasonToString(enum PacketDropReason r)
             return "stream memcap";
         case PKT_DROP_REASON_STREAM_MIDSTREAM:
             return "stream midstream";
+        case PKT_DROP_REASON_STREAM_URG:
+            return "stream urgent";
         case PKT_DROP_REASON_STREAM_REASSEMBLY:
             return "stream reassembly";
         case PKT_DROP_REASON_APPLAYER_ERROR:
@@ -843,6 +846,8 @@ static const char *PacketDropReasonToJsonString(enum PacketDropReason r)
             return "ips.drop_reason.stream_memcap";
         case PKT_DROP_REASON_STREAM_MIDSTREAM:
             return "ips.drop_reason.stream_midstream";
+        case PKT_DROP_REASON_STREAM_URG:
+            return "ips.drop_reason.stream_urgent";
         case PKT_DROP_REASON_STREAM_REASSEMBLY:
             return "ips.drop_reason.stream_reassembly";
         case PKT_DROP_REASON_APPLAYER_ERROR:

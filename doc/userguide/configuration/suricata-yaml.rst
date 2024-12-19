@@ -632,6 +632,7 @@ The detection-engine builds internal groups of signatures. Suricata loads signat
       toserver-groups: 25
     sgh-mpm-context: auto
     inspection-recursion-limit: 3000
+    guess-applayer-tx: no
 
 At all of these options, you can add (or change) a value. Most
 signatures have the adjustment to focus on one direction, meaning
@@ -665,6 +666,12 @@ bugs in Suricata cause big problems. Often Suricata has to deal with
 complicated issues. It could end up in an 'endless loop' due to a bug,
 meaning it will repeat its actions over and over again. With the
 option inspection-recursion-limit you can limit this action.
+
+The ``guess-applayer-tx`` option controls whether the engine will try to guess
+and tie a transaction to a given alert if the matching signature doesn't have
+app-layer keywords. If enabled, AND ONLY ONE LIVE TRANSACTION EXISTS, that
+transaction's data will be added to the alert metadata. Note that this may not
+be the expected data, from an analyst's perspective.
 
 *Example 4	Detection-engine grouping tree*
 
@@ -1255,6 +1262,60 @@ network inspection.
 .. image:: suricata-yaml/reassembly1.png
 
 .. image:: suricata-yaml/IDS_chunk_size.png
+
+
+TCP Urgent Handling
+^^^^^^^^^^^^^^^^^^^
+
+TCP Urgent pointer support is a complicated topic, where it is essentially impossible
+for a network device to know with certainty what the behavior of the receiving host is.
+
+For this reason, many middleboxes strip the URG flag and reset the urgent pointer (see
+for example RFC 6093, 3.4).
+
+Several options are provided to control how to deal with the urgent pointer.
+
+.. note:: TCP urgent handling is considered experimental at this time
+
+::
+
+    stream:
+      reassembly:
+      urgent:
+        policy: oob              # drop, inline, oob (1 byte, see RFC 6093, 3.1), gap
+        oob-limit-policy: drop
+
+`stream.reassembly.urgent.policy`:
+ - `drop`: drop URG packets before they affect the stream engine
+ - `inline`: ignore the urgent pointer and process all data inline
+ - `oob` (out of band): treat the last byte as out of band
+ - `gap`: skip the last byte, but do no adjust sequence offsets, leading to
+          gaps in the data
+
+If the urgent policy is set to `oob`, there is an additional setting. Since OOB data does
+advance the TCP sequence number, the stream engine tracks the number of bytes to make sure
+no GAPs in the non-OOB data are seen by the app-layer parsers and detection engine. This
+is currently limited to 64k per direction. If the number of OOB bytes exceeds that 64k, an
+additional policy is triggered: `stream.reassembly.urgent.oob-limit-policy`.
+
+`stream.reassembly.urgent.oob-limit-policy`:
+- `drop`: drop URG packets before they affect the stream engine
+- `inline`: ignore the urgent pointer and process all data inline
+- `gap`: skip the last byte, but do no adjust sequence offsets, leading to gaps in the data
+
+Observables
+"""""""""""
+
+Each packet with the URG flag set, will increment the `tcp.urg` counter.
+
+When dropping the URG packets, the packets will have the drop reason
+`ips.drop_reason.stream_urgent`, which is also a counter in the stats logging.
+
+The stream event `stream-event:reassembly_urgent_oob_limit_reached` allows matching on the
+packet that reaches the OOB limit. Stream rule `2210066` matches on this.
+
+If `stats.stream-events` are enabled the counter `stream.reassembly_urgent_oob_limit_reached`
+will be incremented if the OOB limit is reached.
 
 
 Host Tracking

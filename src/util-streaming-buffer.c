@@ -137,17 +137,14 @@ static inline bool RegionsIntersect(const StreamingBuffer *sb, const StreamingBu
     SCLogDebug("r %p: %" PRIu64 "/%" PRIu64 " - adjusted %" PRIu64 "/%" PRIu64, r, r->stream_offset,
             r->stream_offset + r->buf_size, reg_o, reg_re);
     /* check if data range intersects with region range */
-    if (offset >= reg_o && offset <= reg_re) {
-        SCLogDebug("r %p is in-scope", r);
-        return true;
+    /* [offset:re] and [reg_o:reg_re] do not intersect if and only if
+     * re < reg_o or if reg_re < offset (one segment is strictly before the other)
+     * trusting that offset<=re and reg_o<=reg_re
+     */
+    if (re < reg_o || reg_re < offset) {
+        return false;
     }
-    if (re >= reg_o && re <= reg_re) {
-        SCLogDebug("r %p is in-scope: %" PRIu64 " >= %" PRIu64 " && %" PRIu64 " <= %" PRIu64, r, re,
-                reg_o, re, reg_re);
-        return true;
-    }
-    SCLogDebug("r %p is out of scope: %" PRIu64 "/%" PRIu64, r, offset, re);
-    return false;
+    return true;
 }
 
 /** \internal
@@ -722,6 +719,10 @@ static inline int WARN_UNUSED GrowRegionToSize(StreamingBuffer *sb,
     /* try to grow in multiples of cfg->buf_size */
     const uint32_t grow = ToNextMultipleOf(size, cfg->buf_size);
     SCLogDebug("grow %u", grow);
+    if (grow <= region->buf_size) {
+        // do not try to shrink, and do not memset with diff having unsigned underflow
+        return SC_OK;
+    }
 
     void *ptr = REALLOC(cfg, region->buf, region->buf_size, grow);
     if (ptr == NULL) {
@@ -943,9 +944,13 @@ static inline void StreamingBufferSlideToOffsetWithRegions(
                     goto done;
                 } else {
                     /* using "main", expand to include "next" */
-                    if (GrowRegionToSize(sb, cfg, start, mem_size) != 0) {
-                        new_mem_size = new_data_size;
-                        goto just_main;
+                    if (mem_size > start->buf_size) {
+                        // Check that start->buf_size is actually not big enough
+                        // As mem_size computation and earlier checks do not make it clear.
+                        if (GrowRegionToSize(sb, cfg, start, mem_size) != 0) {
+                            new_mem_size = new_data_size;
+                            goto just_main;
+                        }
                     }
                     SCLogDebug("start->buf now size %u", mem_size);
 

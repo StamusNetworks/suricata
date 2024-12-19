@@ -129,6 +129,12 @@ pub enum DNSEvent {
     NotResponse,
     ZFlagSet,
     InvalidOpcode,
+    /// A DNS resource name was exessively long and was truncated.
+    NameTooLong,
+    /// An infinite loop was found while parsing a name.
+    InfiniteLoop,
+    /// Too many labels were found.
+    TooManyLabels,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -144,7 +150,7 @@ pub struct DNSHeader {
 
 #[derive(Debug)]
 pub struct DNSQueryEntry {
-    pub name: Vec<u8>,
+    pub name: DNSName,
     pub rrtype: u16,
     pub rrclass: u16,
 }
@@ -152,9 +158,9 @@ pub struct DNSQueryEntry {
 #[derive(Debug, PartialEq, Eq)]
 pub struct DNSRDataSOA {
     /// Primary name server for this zone
-    pub mname: Vec<u8>,
+    pub mname: DNSName,
     /// Authority's mailbox
-    pub rname: Vec<u8>,
+    pub rname: DNSName,
     /// Serial version number
     pub serial: u32,
     /// Refresh interval (seconds)
@@ -186,7 +192,22 @@ pub struct DNSRDataSRV {
     /// Port
     pub port: u16,
     /// Target
-    pub target: Vec<u8>,
+    pub target: DNSName,
+}
+
+bitflags! {
+    #[derive(Default)]
+    pub struct DNSNameFlags: u8 {
+        const INFINITE_LOOP = 0b0000_0001;
+        const TRUNCATED     = 0b0000_0010;
+        const LABEL_LIMIT   = 0b0000_0100;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DNSName {
+    pub value: Vec<u8>,
+    pub flags: DNSNameFlags,
 }
 
 /// Represents RData of various formats
@@ -196,10 +217,10 @@ pub enum DNSRData {
     A(Vec<u8>),
     AAAA(Vec<u8>),
     // RData is a domain name
-    CNAME(Vec<u8>),
-    PTR(Vec<u8>),
-    MX(Vec<u8>),
-    NS(Vec<u8>),
+    CNAME(DNSName),
+    PTR(DNSName),
+    MX(DNSName),
+    NS(DNSName),
     // RData is text
     TXT(Vec<u8>),
     NULL(Vec<u8>),
@@ -213,7 +234,7 @@ pub enum DNSRData {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DNSAnswerEntry {
-    pub name: Vec<u8>,
+    pub name: DNSName,
     pub rrtype: u16,
     pub rrclass: u16,
     pub ttl: u32,
@@ -403,7 +424,7 @@ impl DNSState {
         };
 
         match parser::dns_parse_request_body(body, input, header) {
-            Ok((_, request)) => {
+            Ok((_, (request, parse_flags))) => {
                 if request.header.flags & 0x8000 != 0 {
                     SCLogDebug!("DNS message is not a request");
                     self.set_event(DNSEvent::NotRequest);
@@ -424,6 +445,18 @@ impl DNSState {
 
                 if opcode >= 7 {
                     self.set_event(DNSEvent::InvalidOpcode);
+                }
+
+                if parse_flags.contains(DNSNameFlags::TRUNCATED) {
+                    self.set_event(DNSEvent::NameTooLong);
+                }
+                
+                if parse_flags.contains(DNSNameFlags::INFINITE_LOOP) {
+                    self.set_event(DNSEvent::InfiniteLoop);
+                }
+                
+                if parse_flags.contains(DNSNameFlags::LABEL_LIMIT) {
+                    self.set_event(DNSEvent::TooManyLabels);
                 }
 
                 return true;
@@ -475,7 +508,7 @@ impl DNSState {
         };
 
         match parser::dns_parse_response_body(body, input, header) {
-            Ok((_, response)) => {
+            Ok((_, (response, parse_flags))) => {
                 SCLogDebug!("Response header flags: {}", response.header.flags);
 
                 if response.header.flags & 0x8000 == 0 {
@@ -502,6 +535,18 @@ impl DNSState {
 
                 if opcode >= 7 {
                     self.set_event(DNSEvent::InvalidOpcode);
+                }
+
+                if parse_flags.contains(DNSNameFlags::TRUNCATED) {
+                    self.set_event(DNSEvent::NameTooLong);
+                }
+                
+                if parse_flags.contains(DNSNameFlags::INFINITE_LOOP) {
+                    self.set_event(DNSEvent::InfiniteLoop);
+                }
+                
+                if parse_flags.contains(DNSNameFlags::LABEL_LIMIT) {
+                    self.set_event(DNSEvent::TooManyLabels);
                 }
 
                 return true;
@@ -705,7 +750,7 @@ fn probe(input: &[u8], dlen: usize) -> (bool, bool, bool) {
     }
 
     match parser::dns_parse_request(input) {
-        Ok((_, request)) => {
+        Ok((_, (request, _))) => {
             return probe_header_validity(&request.header, dlen);
         }
         Err(Err::Incomplete(_)) => match parser::dns_parse_header(input) {
@@ -873,9 +918,9 @@ pub unsafe extern "C" fn rs_dns_tx_get_query_name(
     if let Some(request) = &tx.request {
         if (i as usize) < request.queries.len() {
             let query = &request.queries[i as usize];
-            if !query.name.is_empty() {
-                *len = query.name.len() as u32;
-                *buf = query.name.as_ptr();
+            if !query.name.value.is_empty() {
+                *len = query.name.value.len() as u32;
+                *buf = query.name.value.as_ptr();
                 return 1;
             }
         }
@@ -906,7 +951,7 @@ pub unsafe extern "C" fn rs_dns_tx_get_query_rrtype(
     if let Some(request) = &tx.request {
         if (i as usize) < request.queries.len() {
             let query = &request.queries[i as usize];
-            if !query.name.is_empty() {
+            if !query.name.value.is_empty() {
                 *rrtype = query.rrtype;
                 return 1;
             }

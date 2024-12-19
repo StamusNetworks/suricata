@@ -1653,11 +1653,13 @@ void InspectionBufferFree(InspectionBuffer *buffer)
 /**
  * \brief make sure that the buffer has at least 'min_size' bytes
  * Expand the buffer if necessary
+ *
+ * \retval pointer to inner buffer to use, or NULL if realloc failed
  */
-void InspectionBufferCheckAndExpand(InspectionBuffer *buffer, uint32_t min_size)
+uint8_t *InspectionBufferCheckAndExpand(InspectionBuffer *buffer, uint32_t min_size)
 {
     if (likely(buffer->size >= min_size))
-        return;
+        return buffer->buf;
 
     uint32_t new_size = (buffer->size == 0) ? 4096 : buffer->size;
     while (new_size < min_size) {
@@ -1668,7 +1670,24 @@ void InspectionBufferCheckAndExpand(InspectionBuffer *buffer, uint32_t min_size)
     if (ptr != NULL) {
         buffer->buf = ptr;
         buffer->size = new_size;
+    } else {
+        return NULL;
     }
+    return buffer->buf;
+}
+
+/**
+ * \brief set inspect length of inspect buffer
+ * The inspect buffer may have been overallocated (by strip_whitespace for example)
+ * so, this sets the final length
+ */
+void InspectionBufferTruncate(InspectionBuffer *buffer, uint32_t buf_len)
+{
+    DEBUG_VALIDATE_BUG_ON(buffer->buf == NULL);
+    DEBUG_VALIDATE_BUG_ON(buf_len > buffer->size);
+    buffer->inspect = buffer->buf;
+    buffer->inspect_len = buf_len;
+    buffer->initialized = true;
 }
 
 void InspectionBufferCopy(InspectionBuffer *buffer, uint8_t *buf, uint32_t buf_len)
@@ -2903,7 +2922,14 @@ static int DetectEngineCtxLoadConf(DetectEngineCtx *de_ctx)
     SCLogDebug("de_ctx->inspection_recursion_limit: %d",
                de_ctx->inspection_recursion_limit);
 
-    /* parse port grouping whitelisting settings */
+    int guess_applayer = 0;
+    if ((ConfGetBool("detect.guess-applayer-tx", &guess_applayer)) == 1) {
+        if (guess_applayer == 1) {
+            de_ctx->guess_applayer = true;
+        }
+    }
+
+    /* parse port grouping priority settings */
 
     const char *ports = NULL;
     (void)ConfGet("detect.grouping.tcp-whitelist", &ports);
@@ -3919,12 +3945,12 @@ static int DetectEngineMultiTenantReloadTenant(uint32_t tenant_id, const char *f
     new_de_ctx->tenant_path = SCStrdup(filename);
     if (new_de_ctx->tenant_path == NULL) {
         SCLogError("Failed to duplicate path");
-        goto error;
+        goto new_de_ctx_error;
     }
 
     if (SigLoadSignatures(new_de_ctx, NULL, 0) < 0) {
         SCLogError("Loading signatures failed.");
-        goto error;
+        goto new_de_ctx_error;
     }
 
     DetectEngineAddToMaster(new_de_ctx);
@@ -3933,6 +3959,9 @@ static int DetectEngineMultiTenantReloadTenant(uint32_t tenant_id, const char *f
     DetectEngineMoveToFreeList(old_de_ctx);
     DetectEngineDeReference(&old_de_ctx);
     return 0;
+
+new_de_ctx_error:
+    DetectEngineCtxFree(new_de_ctx);
 
 error:
     DetectEngineDeReference(&old_de_ctx);

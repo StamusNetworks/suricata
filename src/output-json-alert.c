@@ -379,6 +379,9 @@ void AlertJsonHeader(void *ctx, const Packet *p, const PacketAlert *pa, JsonBuil
     if (pa->flags & PACKET_ALERT_FLAG_TX) {
         jb_set_uint(js, "tx_id", pa->tx_id);
     }
+    if (pa->flags & PACKET_ALERT_FLAG_TX_GUESSED) {
+        jb_set_bool(js, "tx_guessed", true);
+    }
 
     jb_open_object(js, "alert");
 
@@ -941,12 +944,9 @@ static int AlertJson(ThreadVars *tv, JsonAlertLogThread *aft, const Packet *p)
 static int AlertJsonDecoderEvent(ThreadVars *tv, JsonAlertLogThread *aft, const Packet *p)
 {
     AlertJsonOutputCtx *json_output_ctx = aft->json_output_ctx;
-    char timebuf[64];
 
     if (p->alerts.cnt == 0)
         return TM_ECODE_OK;
-
-    CreateIsoTimeString(p->ts, timebuf, sizeof(timebuf));
 
     for (int i = 0; i < p->alerts.cnt; i++) {
         const PacketAlert *pa = &p->alerts.alerts[i];
@@ -954,15 +954,30 @@ static int AlertJsonDecoderEvent(ThreadVars *tv, JsonAlertLogThread *aft, const 
             continue;
         }
 
-        JsonBuilder *jb = jb_new_object();
-        if (unlikely(jb == NULL)) {
+        JsonBuilder *jb =
+                CreateEveHeader(p, LOG_DIR_PACKET, "alert", NULL, json_output_ctx->eve_ctx);
+        if (unlikely(jb == NULL))
             return TM_ECODE_OK;
-        }
-
-        /* just the timestamp, no tuple */
-        jb_set_string(jb, "timestamp", timebuf);
 
         AlertJsonHeader(json_output_ctx, p, pa, jb, json_output_ctx->flags, NULL, NULL);
+
+        if (IS_TUNNEL_PKT(p)) {
+            AlertJsonTunnel(p, jb);
+        }
+
+        /* base64-encoded full packet */
+        if (json_output_ctx->flags & LOG_JSON_PACKET) {
+            EvePacket(p, jb, 0);
+        }
+
+        char *pcap_filename = PcapLogGetFilename();
+        if (pcap_filename != NULL) {
+            jb_set_string(jb, "capture_file", pcap_filename);
+        }
+
+        if (json_output_ctx->flags & LOG_JSON_VERDICT) {
+            EveAddVerdict(jb, p);
+        }
 
         OutputJsonBuilderBuffer(jb, aft->ctx);
         jb_free(jb);

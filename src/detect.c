@@ -786,6 +786,10 @@ static inline void DetectRulePacketRules(
             goto next; // handle sig in DetectRunFrame
         }
 
+        /* skip pkt sigs for flow end packets */
+        if ((p->flags & PKT_PSEUDO_STREAM_END) != 0 && s->type == SIG_TYPE_PKT)
+            goto next;
+
         /* don't run mask check for stateful rules.
          * There we depend on prefilter */
         if ((s->mask & scratch->pkt_mask) != s->mask) {
@@ -818,16 +822,20 @@ static inline void DetectRulePacketRules(
         DetectRunPostMatch(tv, det_ctx, p, s);
 
         uint64_t txid = PACKET_ALERT_NOTX;
-        if ((alert_flags & PACKET_ALERT_FLAG_STREAM_MATCH) ||
-                (s->alproto != ALPROTO_UNKNOWN && pflow->proto == IPPROTO_UDP)) {
-            // if there is a stream match (TCP), or
-            // a UDP specific app-layer signature,
-            // try to use the good tx for the packet direction
-            if (pflow->alstate) {
-                uint8_t dir =
-                        (p->flowflags & FLOW_PKT_TOCLIENT) ? STREAM_TOCLIENT : STREAM_TOSERVER;
-                txid = AppLayerParserGetTransactionInspectId(pflow->alparser, dir);
+        if (pflow && pflow->alstate) {
+            uint8_t dir = (p->flowflags & FLOW_PKT_TOCLIENT) ? STREAM_TOCLIENT : STREAM_TOSERVER;
+            txid = AppLayerParserGetTransactionInspectId(pflow->alparser, dir);
+            if ((s->alproto != ALPROTO_UNKNOWN && pflow->proto == IPPROTO_UDP) ||
+                    (alert_flags & PACKET_ALERT_FLAG_STREAM_MATCH) ||
+                    (de_ctx->guess_applayer &&
+                            AppLayerParserGetTxCnt(pflow, pflow->alstate) == txid + 1)) {
+                // if there is a UDP specific app-layer signature,
+                // or only one live transaction
+                // try to use the good tx for the packet direction
                 alert_flags |= PACKET_ALERT_FLAG_TX;
+                if (pflow->proto != IPPROTO_UDP) {
+                    alert_flags |= PACKET_ALERT_FLAG_TX_GUESSED;
+                }
             }
         }
         AlertQueueAppend(det_ctx, s, p, txid, alert_flags);

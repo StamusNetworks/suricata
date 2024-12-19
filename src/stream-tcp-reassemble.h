@@ -80,6 +80,9 @@ typedef struct TcpReassemblyThreadCtx_ {
 
     uint16_t counter_tcp_reass_data_normal_fail;
     uint16_t counter_tcp_reass_data_overlap_fail;
+
+    /** count OOB bytes */
+    uint16_t counter_tcp_urgent_oob;
 } TcpReassemblyThreadCtx;
 
 #define OS_POLICY_DEFAULT   OS_POLICY_BSD
@@ -107,7 +110,8 @@ void StreamTcpSetOSPolicy(TcpStream *, Packet *);
 
 int StreamTcpReassembleHandleSegmentHandleData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
         TcpSession *ssn, TcpStream *stream, Packet *p);
-int StreamTcpReassembleInsertSegment(ThreadVars *, TcpReassemblyThreadCtx *, TcpStream *, TcpSegment *, Packet *, uint32_t pkt_seq, uint8_t *pkt_data, uint16_t pkt_datalen);
+int StreamTcpReassembleInsertSegment(ThreadVars *, TcpReassemblyThreadCtx *, TcpStream *,
+        TcpSegment *, Packet *, uint8_t *pkt_data, uint16_t pkt_datalen);
 TcpSegment *StreamTcpGetSegment(ThreadVars *, TcpReassemblyThreadCtx *);
 
 void StreamTcpReturnStreamSegments(TcpStream *);
