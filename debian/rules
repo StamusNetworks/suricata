@@ -40,8 +40,8 @@ override_dh_strip:
 	dh_strip --dbg-package=suricata-dbg
 override_dh_auto_install:
 	dh_auto_install --destdir=$(DEB_DESTDIR)
-	rm -rf $(SURICATA_DESTDIR)/usr/lib/python*;\
-	(cd python && make prefix=$(SURICATA_DESTDIR)/usr)
+	rm -rf $(DEB_DESTDIR)/usr/lib/python*;\
+	(cd python && make prefix=$(DEB_DESTDIR)/usr)
 
 override_dh_installdocs:
 	dh_installdocs --link-doc=suricata
