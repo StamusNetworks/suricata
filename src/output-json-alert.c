@@ -135,7 +135,7 @@ static void AlertJsonTls(const Flow *f, const uint32_t sig_flags, JsonBuilder *j
     if (ssl_state) {
         jb_open_object(js, "tls");
 
-        JsonTlsLogJSONExtended(js, ssl_state, sig_flags & SIG_FLAG_JA4);
+        JsonTlsLogJSONExtended(js, ssl_state, SIG_FLAG_JA4);
 
         jb_close(js);
     }
