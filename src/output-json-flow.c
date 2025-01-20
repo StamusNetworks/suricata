@@ -27,6 +27,7 @@
 #include "detect.h"
 #include "pkt-var.h"
 #include "conf.h"
+#include "app-layer-parser.h"
 
 #include "threads.h"
 #include "threadvars.h"
@@ -277,6 +278,13 @@ static void EveFlowLogJSON(OutputJsonThreadCtx *aft, JsonBuilder *jb, Flow *f)
         JB_SET_STRING(jb, "action", "drop");
     } else if (f->flags & FLOW_ACTION_PASS) {
         JB_SET_STRING(jb, "action", "pass");
+    }
+
+    if (f->alparser) {
+        uint64_t tx_id = AppLayerParserGetTransactionLogId(f->alparser);
+        if (tx_id) {
+            jb_set_uint(jb, "tx_cnt", tx_id);
+        }
     }
 
     /* Close flow. */

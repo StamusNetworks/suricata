@@ -1590,6 +1590,9 @@
                 },
                 "state": {
                     "type": "string"
+                },
+                "tx_cnt": {
+                    "type": "integer"
                 }
             },
             "additionalProperties": false
