@@ -231,6 +231,10 @@ static int PcapLogCondition(ThreadVars *tv, void *thread_data, const Packet *p)
 {
     PcapLogThreadData *ptd = (PcapLogThreadData *)thread_data;
 
+    if (PKT_IS_PSEUDOPKT(p)) {
+        return FALSE;
+    }
+
     /* Log alerted flow or tagged flow */
     switch (ptd->pcap_log->conditional) {
         case LOGMODE_COND_ALL:
@@ -251,13 +255,10 @@ static int PcapLogCondition(ThreadVars *tv, void *thread_data, const Packet *p)
             break;
     }
 
-    if (p->flags & PKT_PSEUDO_STREAM_END) {
-        return FALSE;
-    }
-
     if (IS_TUNNEL_PKT(p) && !IS_TUNNEL_ROOT_PKT(p)) {
         return FALSE;
     }
+
     return TRUE;
 }
 
