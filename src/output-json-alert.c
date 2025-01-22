@@ -779,6 +779,20 @@ static bool AlertJsonStreamData(const AlertJsonOutputCtx *json_output_ctx, JsonA
     return false;
 }
 
+static void PcapLogFilename(JsonBuilder *jb, const Packet *p)
+{
+    char *pcap_filename = PcapLogGetFilename();
+    if (pcap_filename != NULL) {
+        return;
+    }
+
+    if (PKT_IS_PSEUDOPKT(p)) {
+        return;
+    }
+
+    jb_set_string(jb, "capture_file", pcap_filename);
+}
+
 static int AlertJson(ThreadVars *tv, JsonAlertLogThread *aft, const Packet *p)
 {
     AlertJsonOutputCtx *json_output_ctx = aft->json_output_ctx;
@@ -914,10 +928,8 @@ static int AlertJson(ThreadVars *tv, JsonAlertLogThread *aft, const Packet *p)
             EvePacket(p, jb, 0);
         }
 
-        char *pcap_filename = PcapLogGetFilename();
-        if (pcap_filename != NULL) {
-            jb_set_string(jb, "capture_file", pcap_filename);
-        }
+        /* log the capture file name iif ever we are storing the data to disk */
+        PcapLogFilename(jb, p);
 
         if (json_output_ctx->flags & LOG_JSON_VERDICT) {
             EveAddVerdict(jb, p);
