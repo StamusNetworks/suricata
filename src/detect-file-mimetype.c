@@ -28,10 +28,13 @@
 #include "detect-engine-mpm.h"
 #include "detect-engine-prefilter.h"
 #include "detect-engine-content-inspection.h"
+#include "detect-parse.h"
 #include "rust.h"
 #include "util-mimetype.h"
 #include "app-layer-parser.h"
 
+
+static int g_file_match_list_id = 0;
 
 static int DetectFileMimetypeSetup(DetectEngineCtx *de_ctx, Signature *s, const char *str);
 static int g_file_mimetype_buffer_id = 0;
@@ -53,37 +56,20 @@ void DetectFileMimetypeRegister(void)
     sigmatch_table[DETECT_FILE_MIMETYPE].Setup = DetectFileMimetypeSetup;
     sigmatch_table[DETECT_FILE_MIMETYPE].flags = SIGMATCH_NOOPT|SIGMATCH_INFO_STICKY_BUFFER;
 
-    AppProto protos_ts[] = { ALPROTO_HTTP, ALPROTO_SMTP, ALPROTO_FTP, ALPROTO_FTPDATA, ALPROTO_SMB,
-        ALPROTO_NFS, 0 };
-    AppProto protos_tc[] = { ALPROTO_HTTP, ALPROTO_FTP, ALPROTO_FTPDATA, ALPROTO_SMB, ALPROTO_NFS,
-        0 };
+    filehandler_table[DETECT_FILE_MIMETYPE].name = "file.mime_type",
+    filehandler_table[DETECT_FILE_MIMETYPE].priority = 2;
+    filehandler_table[DETECT_FILE_MIMETYPE].PrefilterFn = PrefilterMpmFileMimetypeRegister;
+    filehandler_table[DETECT_FILE_MIMETYPE].Callback = DetectEngineInspectFileMimetype;
 
-    for (int i = 0; protos_ts[i] != 0; i++) {
-        DetectAppLayerInspectEngineRegister2("file.mime_type", protos_ts[i],
-                SIG_FLAG_TOSERVER, 0,
-                DetectEngineInspectFileMimetype, NULL);
 
-        DetectAppLayerMpmRegister2("file.mime_type", SIG_FLAG_TOSERVER, 2,
-                PrefilterMpmFileMimetypeRegister, NULL, protos_ts[i],
-                0);
-    }
-    for (int i = 0; protos_tc[i] != 0; i++) {
-        DetectAppLayerInspectEngineRegister2("file.mime_type", protos_tc[i],
-                SIG_FLAG_TOCLIENT, 0,
-                DetectEngineInspectFileMimetype, NULL);
+    g_file_match_list_id = DetectBufferTypeRegister("files");
 
-        DetectAppLayerMpmRegister2("file.mime_type", SIG_FLAG_TOCLIENT, 2,
-                PrefilterMpmFileMimetypeRegister, NULL, protos_tc[i],
-                0);
-    }
-
-    DetectBufferTypeSetDescriptionByName("file.mime_type",
-            "file mime type");
+    DetectBufferTypeSetDescriptionByName("file.mime_type", "file mime_type");
+    DetectBufferTypeSupportsMultiInstance("file.mime_type");
 
     g_file_mimetype_buffer_id = DetectBufferTypeGetByName("file.mime_type");
 
     SCLogDebug("registering file mime type rule option");
- return;
 }
 
 static int DetectFileMimetypeSetup(DetectEngineCtx *de_ctx, Signature *s, const char *str)
@@ -92,7 +78,6 @@ static int DetectFileMimetypeSetup(DetectEngineCtx *de_ctx, Signature *s, const 
         return -1;
     s->file_flags |= (FILE_SIG_NEED_FILE); /* FIXME do we need a custom need flag . */
     return 0;
-
 }
 
 static InspectionBuffer *FileMimetypeGetDataCallback(DetectEngineThreadCtx *det_ctx,
