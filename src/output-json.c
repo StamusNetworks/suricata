@@ -230,9 +230,11 @@ void EveFileInfo(JsonBuilder *jb, const File *ff, const uint64_t tx_id, const ui
         JB_SET_TRUE(jb, "stored");
         jb_set_uint(jb, "file_id", ff->file_store_id);
     } else {
-        JB_SET_FALSE(jb, "stored");
         if (flags & FILE_STORE) {
+            JB_SET_TRUE(jb, "stored");
             JB_SET_TRUE(jb, "storing");
+        } else {
+            JB_SET_FALSE(jb, "stored");
         }
     }
 
