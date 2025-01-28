@@ -782,7 +782,7 @@ static bool AlertJsonStreamData(const AlertJsonOutputCtx *json_output_ctx, JsonA
 static void PcapLogFilename(JsonBuilder *jb, const Packet *p)
 {
     char *pcap_filename = PcapLogGetFilename();
-    if (pcap_filename != NULL) {
+    if (pcap_filename == NULL) {
         return;
     }
 
