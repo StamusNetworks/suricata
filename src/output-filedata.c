@@ -144,6 +144,10 @@ void OutputFiledataLogFfc(ThreadVars *tv, OutputFiledataLoggerThreadData *td, Pa
             FilemagicThreadLookup(&td->magic_ctx, ff);
         }
 #endif
+        if (FileForceMimetype() && ff->mimetype == NULL) {
+            FileMimetypeLookup(ff);
+        }
+
         if (ff->flags & FILE_STORED) {
             continue;
         }
@@ -164,9 +168,6 @@ void OutputFiledataLogFfc(ThreadVars *tv, OutputFiledataLoggerThreadData *td, Pa
         if (FileDataSize(ff) == ff->content_stored && (file_trunc || file_close)) {
             if (ff->state < FILE_STATE_CLOSED) {
                 FileCloseFilePtr(ff, files.cfg, NULL, 0, FILE_TRUNCATED);
-            }
-            if (FileForceMimetype() && ff->mimetype == NULL) {
-                FileMimetypeLookup(ff);
             }
             file_flags |= OUTPUT_FILEDATA_FLAG_CLOSE;
             CallLoggers(tv, store, p, ff, txv, tx_id, NULL, 0, file_flags, dir);
