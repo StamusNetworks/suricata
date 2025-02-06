@@ -88,6 +88,7 @@
 #include "util-optimize.h"
 #include "util-buffer.h"
 #include "util-validate.h"
+#include "util-mimetype.h"
 
 #include "action-globals.h"
 
@@ -623,6 +624,8 @@ static void AlertAddFiles(const Packet *p, JsonBuilder *jb, const uint64_t tx_id
                 isopen = true;
                 jb_open_array(jb, "files");
             }
+            if (FileForceMimetype() && file->mimetype == NULL)
+                FileMimetypeLookup(file);
             jb_start_object(jb);
             EveFileInfo(jb, file, tx_id, file->flags);
             jb_close(jb);
