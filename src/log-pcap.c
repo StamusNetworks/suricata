@@ -698,7 +698,7 @@ static int PcapLog (ThreadVars *t, void *thread_data, const Packet *p)
 #else
             PcapLogDumpSegments(td, NULL, p);
 #endif
-            if (p->flags & PKT_PSEUDO_STREAM_END) {
+            if (PKT_IS_PSEUDOPKT(p)) {
                 PcapLogUnlock(pl);
                 return TM_ECODE_OK;
             }
