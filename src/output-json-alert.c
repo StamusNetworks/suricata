@@ -789,10 +789,6 @@ static void PcapLogFilename(JsonBuilder *jb, const Packet *p)
         return;
     }
 
-    if (PKT_IS_PSEUDOPKT(p)) {
-        return;
-    }
-
     jb_set_string(jb, "capture_file", pcap_filename);
 }
 
