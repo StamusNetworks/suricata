@@ -242,6 +242,7 @@ static void *ParseAFPConfig(const char *iface)
     aconf->copy_mode = AFP_COPY_MODE_NONE;
     aconf->block_timeout = 10;
     aconf->block_size = getpagesize() << AFP_BLOCK_SIZE_DEFAULT_ORDER;
+    aconf->v2_block_size = 0;
 #ifdef HAVE_PACKET_EBPF
     aconf->ebpf_t_config.cpus_count = UtilCpuGetNumProcessorsConfigured();
 #endif
@@ -379,8 +380,19 @@ static void *ParseAFPConfig(const char *iface)
     }
 
     if (ConfGetChildValueWithDefault(if_root, if_default, "cluster-type", &tmpctype) != 1) {
-        /* default to our safest choice: flow hashing + defrag enabled */
-        aconf->cluster_type = PACKET_FANOUT_HASH | PACKET_FANOUT_FLAG_DEFRAG;
+        /* Default to our safest choice: flow hashing + defrag
+         * enabled, unless defrag has been disabled by the user. */
+        uint16_t defrag = PACKET_FANOUT_FLAG_DEFRAG;
+        int conf_val = 0;
+        SCLogConfig("%s: using flow cluster mode for AF_PACKET", aconf->iface);
+        if (ConfGetChildValueBoolWithDefault(if_root, if_default, "defrag", &conf_val)) {
+            if (!conf_val) {
+                SCLogConfig(
+                        "%s: disabling defrag kernel functionality for AF_PACKET", aconf->iface);
+                defrag = 0;
+            }
+        }
+        aconf->cluster_type = PACKET_FANOUT_HASH | defrag;
         cluster_type = PACKET_FANOUT_HASH;
     } else if (strcmp(tmpctype, "cluster_round_robin") == 0) {
         SCLogConfig("%s: using round-robin cluster mode for AF_PACKET", aconf->iface);
@@ -644,6 +656,15 @@ static void *ParseAFPConfig(const char *iface)
         aconf->block_timeout = 10;
     }
 
+    if ((ConfGetChildValueIntWithDefault(if_root, if_default, "v2-block-size", &value)) == 1) {
+        if (value % getpagesize()) {
+            SCLogWarning("%s: v2-block-size %" PRIuMAX " must be a multiple of pagesize (%u).",
+                    iface, value, getpagesize());
+        } else {
+            aconf->v2_block_size = value;
+        }
+    }
+
     (void)ConfGetChildValueBoolWithDefault(if_root, if_default, "disable-promisc", (int *)&boolval);
     if (boolval) {
         SCLogConfig("%s: disabling promiscuous mode", aconf->iface);
@@ -747,6 +768,42 @@ finalize:
         aconf->flags |= AFP_SOCK_PROTECT;
         aconf->flags |= AFP_NEED_PEER;
     }
+
+    /* Warn if inline and defrag is enabled. */
+    if (aconf->copy_mode != AFP_COPY_MODE_NONE && aconf->cluster_type & PACKET_FANOUT_FLAG_DEFRAG) {
+        SCLogWarning(
+                "%s: AF_PACKET defrag is not recommended for inline use, please disable", iface);
+    }
+
+    /* Warn if not inline and defrag is disabled. */
+    if (aconf->copy_mode == AFP_COPY_MODE_NONE && cluster_type == PACKET_FANOUT_HASH &&
+            ((aconf->cluster_type & PACKET_FANOUT_FLAG_DEFRAG) == 0)) {
+        SCLogWarning("%s: AF_PACKET defrag is recommended for IDS cluster_flow", iface);
+    }
+
+    /* For tpacket-v2, warn if defrag is enabled and block-size is
+     * less than max defragmented packet size. */
+    if ((aconf->flags & AFP_TPACKET_V3) == 0 && (aconf->cluster_type & PACKET_FANOUT_FLAG_DEFRAG) &&
+            aconf->v2_block_size > 0 && aconf->v2_block_size < MAX_PACKET_SIZE) {
+        SCLogWarning("%s: AF_PACKET v2-block-size is not large enough for max fragmented IP packet "
+                     "size (%u)",
+                iface, MAX_PACKET_SIZE);
+    }
+
+    /* For tpacket-v3, warn if defrag is enabled and block-block-size
+     * is less than max defragmented packet size. */
+    if ((aconf->flags & AFP_TPACKET_V3) && (aconf->cluster_type & PACKET_FANOUT_FLAG_DEFRAG) &&
+            (aconf->block_size < MAX_PACKET_SIZE)) {
+        SCLogWarning("%s: AF_PACKET block-size is not large enough for max fragmented IP packet "
+                     "size (%u)",
+                iface, MAX_PACKET_SIZE);
+    }
+
+    /* Warn that if not-inline, tpacket-v3 is the better choice. */
+    if (aconf->copy_mode == AFP_COPY_MODE_NONE && (aconf->flags & AFP_TPACKET_V3) == 0) {
+        SCLogWarning("%s: AF_PACKET tpacket-v3 is recommended for non-inline operation", iface);
+    }
+
     return aconf;
 }
 

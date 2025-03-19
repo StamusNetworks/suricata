@@ -75,7 +75,15 @@ struct ebpf_timeout_config {
  * page_size << order. So default value is using the same formula with
  * an order of 3 which guarantee we have some room in the block compared
  * to standard frame size */
-#define AFP_BLOCK_SIZE_DEFAULT_ORDER 3
+#define AFP_BLOCK_SIZE_DEFAULT_ORDER 5
+
+/* Set max packet size to 65561: IP + Ethernet + 3 VLAN tags. */
+#define MAX_PACKET_SIZE 65561
+
+/* Default snaplen to use when defrag enabled. 9k is somewhat
+ * arbitrary but is large enough for the common 9000 jumbo frame plus
+ * some extra headers including tpacket headers. */
+#define DEFAULT_TPACKET_DEFRAG_SNAPLEN 9216
 
 typedef struct AFPIfaceConfig_
 {
@@ -90,6 +98,8 @@ typedef struct AFPIfaceConfig_
     int block_size;
     /* block timeout for tpacket_v3 in milliseconds */
     int block_timeout;
+    /* block size for tpacket v2 */
+    int v2_block_size;
     /* cluster param */
     uint16_t cluster_id;
     int cluster_type;

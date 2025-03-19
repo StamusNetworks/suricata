@@ -34,12 +34,40 @@ also check all the new features that have been added but are not covered by
 this guide. Those features are either not enabled by default or require
 dedicated new configuration.
 
+Upgrading to 7.0.9
+------------------
+- The AF_PACKET default block size for both TPACKET_V2 and TPACKET_V3
+  has been increased from 32k to 128k. This is to allow for full size
+  defragmented packets. For TPACKET_V3 the existing ``block-size``
+  parameter can be used to change this back to the old default of
+  32768 if needed. For TPACKET_V2 a new configuration parameter has
+  been added, ``v2-block-size`` which can be used to tune this value
+  for TPACKET_V2. Due to the increased block size, memory usage has
+  been increased, but should not be an issue in most cases.
+- Datasets specifying a custom `hashsize` will now be limited to 262144 by default.
+  Additionally, the cumulative hash sizes for all datasets in use should not exceed
+  67108864. These settings can be changed with the following settings.
+
+  .. code-block:: yaml
+
+    datasets:
+      # Limits for per rule dataset instances to avoid rules using too many
+      # resources.
+      # Note: in Suricata 8 the built-in default will be set to lower values.
+      limits:
+        # Max value for per dataset `hashsize` setting
+        #single-hashsize: 262144
+        # Max combined hashsize values for all datasets.
+        #total-hashsizes: 67108864
+- For detect inspection recursion limits, if no value is provided, the default is
+  3000 now.
+
 Upgrading to 7.0.8
 ------------------
 - Unknown requirements in the ``requires`` keyword will now be treated
   as unsatisfied requirements, causing the rule to not be loaded. See
   :ref:`keyword_requires`. To opt out of this change and to ignore
-  uknown requirements, effectively treating them as satified the
+  unknown requirements, effectively treating them as satisfied the
   ``ignore-unknown-requirements`` configuration option can be used.
 
   Command line example::
@@ -66,6 +94,13 @@ Upgrading to 7.0.8
   the engine will NOT log any transaction metadata if there is more than one
   live transaction, to reduce the chances of logging unrelated data.** This may
   lead to what looks like a regression in behavior, but it is a considered choice.
+- The configuration setting controlling stream checksum checks no longer affects
+  checksum keyword validation. In previous Suricata versions, when ``stream.checksum-validation``
+  was set to ``no``, the checksum keywords (e.g., ``ipv4-csum``, ``tcpv4-csum``, etc)
+  will always consider it valid; e.g., ``tcpv4-csum: invalid`` will never match. Now,
+  ``stream.checksum-validation`` no longer affects the checksum rule keywords.
+  E.g., ``ipv4-csum: valid`` will only match if the check sum is valid, even when engine
+  checksum validations are disabled.
 
 Upgrading 6.0 to 7.0
 --------------------

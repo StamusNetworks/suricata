@@ -88,6 +88,8 @@ impl DCERPCUDPState {
             for tx_old in &mut self.transactions.range_mut(self.tx_index_completed..) {
                 index += 1;
                 if !tx_old.req_done || !tx_old.resp_done {
+                    tx_old.tx_data.updated_tc = true;
+                    tx_old.tx_data.updated_ts = true;
                     tx_old.req_done = true;
                     tx_old.resp_done = true;
                     break;
@@ -165,6 +167,8 @@ impl DCERPCUDPState {
         }
 
         if let Some(tx) = otx {
+            tx.tx_data.updated_tc = true;
+            tx.tx_data.updated_ts = true;
             let done = (hdr.flags1 & PFCL1_FRAG) == 0 || (hdr.flags1 & PFCL1_LASTFRAG) != 0;
 
             match hdr.pkt_type {
@@ -410,9 +414,7 @@ mod tests {
             0x1c, 0x7d, 0xcf, 0x11,
         ];
 
-        if let Ok((_rem, _header)) = parser::parse_dcerpc_udp_header(request) {
-            { assert!(false); }
-        }
+        assert!(parser::parse_dcerpc_udp_header(request).is_err());
     }
 
     #[test]
@@ -425,13 +427,9 @@ mod tests {
             0x79, 0xbe, 0x01, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0xff, 0xff, 0xff, 0xff, 0x68, 0x00, 0x00, 0x00, 0x0a, 0x00,
         ];
-        match parser::parse_dcerpc_udp_header(request) {
-            Ok((rem, header)) => {
-                assert_eq!(4, header.rpc_vers);
-                assert_eq!(80, request.len() - rem.len());
-            }
-            _ => { assert!(false); }
-        }
+        let (rem, header) = parser::parse_dcerpc_udp_header(request).unwrap();
+        assert_eq!(4, header.rpc_vers);
+        assert_eq!(80, request.len() - rem.len());
     }
 
     #[test]
@@ -444,14 +442,10 @@ mod tests {
             0x79, 0xbe, 0x01, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0xff, 0xff, 0xff, 0xff, 0x68, 0x00, 0x00, 0x00, 0x0a, 0x00,
         ];
-        match parser::parse_dcerpc_udp_header(request) {
-            Ok((rem, header)) => {
-                assert_eq!(4, header.rpc_vers);
-                assert_eq!(80, request.len() - rem.len());
-                assert_eq!(0, rem.len());
-            }
-            _ => { assert!(false); }
-        }
+        let (rem, header) = parser::parse_dcerpc_udp_header(request).unwrap();
+        assert_eq!(4, header.rpc_vers);
+        assert_eq!(80, request.len() - rem.len());
+        assert_eq!(0, rem.len());
     }
 
     #[test]

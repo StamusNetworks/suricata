@@ -31,12 +31,14 @@ static mut ALPROTO_QUIC: AppProto = ALPROTO_UNKNOWN;
 
 const DEFAULT_DCID_LEN: usize = 16;
 const PKT_NUM_BUF_MAX_LEN: usize = 4;
+pub(super) const QUIC_MAX_CRYPTO_FRAG_LEN: u64 = 65535;
 
 #[derive(FromPrimitive, Debug, AppLayerEvent)]
 pub enum QuicEvent {
     FailedDecrypt,
     ErrorOnData,
     ErrorOnHeader,
+    CryptoFragTooLong,
 }
 
 #[derive(Debug)]
@@ -103,8 +105,17 @@ pub struct QuicState {
     state_data: AppLayerStateData,
     max_tx_id: u64,
     keys: Option<QuicKeys>,
+    /// crypto fragment data already seen and reassembled to client
+    crypto_frag_tc: Vec<u8>,
+    /// number of bytes set in crypto fragment data to client
+    crypto_fraglen_tc: u32,
+    /// crypto fragment data already seen and reassembled to server
+    crypto_frag_ts: Vec<u8>,
+    /// number of bytes set in crypto fragment data to server
+    crypto_fraglen_ts: u32,
     hello_tc: bool,
     hello_ts: bool,
+    has_retried: bool,
     transactions: VecDeque<QuicTransaction>,
 }
 
@@ -114,8 +125,13 @@ impl Default for QuicState {
             state_data: AppLayerStateData::new(),
             max_tx_id: 0,
             keys: None,
+            crypto_frag_tc: Vec::new(),
+            crypto_frag_ts: Vec::new(),
+            crypto_fraglen_tc: 0,
+            crypto_fraglen_ts: 0,
             hello_tc: false,
             hello_ts: false,
+            has_retried: false,
             transactions: VecDeque::new(),
         }
     }
@@ -144,10 +160,14 @@ impl QuicState {
     fn new_tx(
         &mut self, header: QuicHeader, data: QuicData, sni: Option<Vec<u8>>, ua: Option<Vec<u8>>,
         extb: Vec<QuicTlsExtension>, ja3: Option<String>, ja4: Option<String>, client: bool,
+        frag_long: bool,
     ) {
         let mut tx = QuicTransaction::new(header, data, sni, ua, extb, ja3, ja4, client);
         self.max_tx_id += 1;
         tx.tx_id = self.max_tx_id;
+        if frag_long {
+            tx.tx_data.set_event(QuicEvent::CryptoFragTooLong as u8);
+        }
         self.transactions.push_back(tx);
     }
 
@@ -225,6 +245,7 @@ impl QuicState {
         let mut ja3: Option<String> = None;
         let mut ja4: Option<String> = None;
         let mut extv: Vec<QuicTlsExtension> = Vec::new();
+        let mut frag_long = false;
         for frame in &data.frames {
             match frame {
                 Frame::Stream(s) => {
@@ -239,6 +260,24 @@ impl QuicState {
                                 break;
                             }
                         }
+                    }
+                }
+                Frame::CryptoFrag(frag) => {
+                    // means we had some fragments but not full TLS hello
+                    // save it for a later packet
+                    if to_server {
+                        // use a hardcoded limit to not grow indefinitely
+                        if frag.length < QUIC_MAX_CRYPTO_FRAG_LEN {
+                            self.crypto_frag_ts.clone_from(&frag.data);
+                            self.crypto_fraglen_ts = frag.offset as u32;
+                        } else {
+                            frag_long = true;
+                        }
+                    } else if frag.length < QUIC_MAX_CRYPTO_FRAG_LEN {
+                        self.crypto_frag_tc.clone_from(&frag.data);
+                        self.crypto_fraglen_tc = frag.offset as u32;
+                    } else {
+                        frag_long = true;
                     }
                 }
                 Frame::Crypto(c) => {
@@ -268,7 +307,7 @@ impl QuicState {
                 _ => {}
             }
         }
-        self.new_tx(header, data, sni, ua, extv, ja3, ja4, to_server);
+        self.new_tx(header, data, sni, ua, extv, ja3, ja4, to_server, frag_long);
     }
 
     fn set_event_notx(&mut self, event: QuicEvent, header: QuicHeader, client: bool) {
@@ -297,12 +336,39 @@ impl QuicState {
                     // unprotect/decrypt packet
                     if self.keys.is_none() && header.ty == QuicType::Initial {
                         self.keys = quic_keys_initial(u32::from(header.version), &header.dcid);
+                    } else if !to_server
+                        && self.keys.is_some()
+                        && header.ty == QuicType::Retry
+                        && !self.has_retried
+                    {
+                        // a retry packet discards the current keys, client will resend an initial packet with new keys
+                        self.hello_ts = false;
+                        self.keys = None;
+                        // RFC 9000 17.2.5.2 After the client has received and processed an Initial or Retry packet
+                        // from the server, it MUST discard any subsequent Retry packets that it receives.
+                        self.has_retried = true;
                     }
                     // header.length was checked against rest.len() during parsing
                     let (mut framebuf, next_buf) = rest.split_at(header.length.into());
+                    if header.ty != QuicType::Initial {
+                        // only version is interesting, no frames
+                        self.new_tx(
+                            header,
+                            QuicData { frames: Vec::new() },
+                            None,
+                            None,
+                            Vec::new(),
+                            None,
+                            None,
+                            to_server,
+                            false,
+                        );
+                        buf = next_buf;
+                        continue;
+                    }
                     let hlen = buf.len() - rest.len();
                     let mut output;
-                    if self.keys.is_some() {
+                    if self.keys.is_some() && !framebuf.is_empty() {
                         output = Vec::with_capacity(framebuf.len() + 4);
                         if let Ok(dlen) =
                             self.decrypt(to_server, &header, framebuf, buf, hlen, &mut output)
@@ -316,22 +382,26 @@ impl QuicState {
                     }
                     buf = next_buf;
 
-                    if header.ty != QuicType::Initial {
-                        // only version is interesting, no frames
-                        self.new_tx(
-                            header,
-                            QuicData { frames: Vec::new() },
-                            None,
-                            None,
-                            Vec::new(),
-                            None,
-                            None,
-                            to_server,
-                        );
-                        continue;
+                    let mut frag = Vec::new();
+                    // take the current fragment and reset it in the state
+                    let past_frag = if to_server {
+                        std::mem::swap(&mut self.crypto_frag_ts, &mut frag);
+                        &frag
+                    } else {
+                        std::mem::swap(&mut self.crypto_frag_tc, &mut frag);
+                        &frag
+                    };
+                    let past_fraglen = if to_server {
+                        self.crypto_fraglen_ts
+                    } else {
+                        self.crypto_fraglen_tc
+                    };
+                    if to_server {
+                        self.crypto_fraglen_ts = 0
+                    } else {
+                        self.crypto_fraglen_tc = 0
                     }
-
-                    match QuicData::from_bytes(framebuf) {
+                    match QuicData::from_bytes(framebuf, past_frag, past_fraglen) {
                         Ok(data) => {
                             self.handle_frames(data, header, to_server);
                         }
