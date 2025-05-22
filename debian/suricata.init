@@ -104,7 +104,7 @@ case "$1" in
        if [ -z "$RUN_AS_USER" ]; then
            USER_SWITCH=
        else
-           USER_SWITCH="--user=${RUN_AS_USER} --group=redis"
+           USER_SWITCH="--user=${RUN_AS_USER} --group=suri"
            chown ${RUN_AS_USER}:${RUN_AS_USER} /var/run/suricata
        fi
        if [ -f /usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4 ] && [ "x$TCMALLOC" = "xYES" ]; then
