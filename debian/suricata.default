@@ -4,7 +4,7 @@
 RUN=yes
 
 # set to user that will run suricata in the init.d script (used for dropping privileges only)
-RUN_AS_USER=logstash
+RUN_AS_USER=suri
 
 # Configuration file to load
 SURCONF=/etc/suricata/suricata.yaml
