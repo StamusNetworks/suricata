@@ -197,8 +197,8 @@ static void NetFlowLogEveToServer(JsonBuilder *js, Flow *f)
     jb_set_uint(js, "min_ttl", f->min_ttl_toserver);
     jb_set_uint(js, "max_ttl", f->max_ttl_toserver);
 
-    if (f->alparser) {
-        uint64_t tx_id = AppLayerParserGetTransactionLogId(f->alparser);
+    if (f->alstate) {
+        uint64_t tx_id = AppLayerParserGetTxCnt(f, f->alstate);
         if (tx_id) {
             jb_set_uint(js, "tx_cnt", tx_id);
         }
@@ -248,8 +248,8 @@ static void NetFlowLogEveToClient(JsonBuilder *js, Flow *f)
         jb_set_uint(js, "max_ttl", f->max_ttl_toclient);
     }
 
-    if (f->alparser) {
-        uint64_t tx_id = AppLayerParserGetTransactionLogId(f->alparser);
+    if (f->alstate) {
+        uint64_t tx_id = AppLayerParserGetTxCnt(f, f->alstate);
         if (tx_id) {
             jb_set_uint(js, "tx_cnt", tx_id);
         }

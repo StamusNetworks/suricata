@@ -280,8 +280,8 @@ static void EveFlowLogJSON(OutputJsonThreadCtx *aft, JsonBuilder *jb, Flow *f)
         JB_SET_STRING(jb, "action", "pass");
     }
 
-    if (f->alparser) {
-        uint64_t tx_id = AppLayerParserGetTransactionLogId(f->alparser);
+    if (f->alstate) {
+        uint64_t tx_id = AppLayerParserGetTxCnt(f, f->alstate);
         if (tx_id) {
             jb_set_uint(jb, "tx_cnt", tx_id);
         }
