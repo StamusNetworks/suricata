@@ -31,6 +31,7 @@
 #include "detect-parse.h"
 #include "rust.h"
 #include "util-mimetype.h"
+#include "util-profiling.h"
 #include "app-layer-parser.h"
 
 
@@ -136,9 +137,6 @@ static void PrefilterTxFileMimetype(DetectEngineThreadCtx *det_ctx, const void *
     if (ffc != NULL) {
         int local_file_id = 0;
         for (File *file = ffc->head; file != NULL; file = file->next) {
-            if (file->file_track_id != idx)
-                continue;
-
             InspectionBuffer *buffer = FileMimetypeGetDataCallback(det_ctx,
                     ctx->transforms, f, flags, file, list_id, local_file_id, txv);
             if (buffer == NULL)
@@ -148,6 +146,7 @@ static void PrefilterTxFileMimetype(DetectEngineThreadCtx *det_ctx, const void *
                 (void)mpm_table[mpm_ctx->mpm_type].Search(mpm_ctx,
                         &det_ctx->mtcu, &det_ctx->pmq,
                         buffer->inspect, buffer->inspect_len);
+                PREFILTER_PROFILING_ADD_BYTES(det_ctx, buffer->inspect_len);
             }
             local_file_id++;
         }
@@ -189,7 +188,7 @@ static unsigned char DetectEngineInspectFileMimetype(
     AppLayerGetFileState files = AppLayerParserGetTxFiles(f, alstate, txv, flags);
     FileContainer *ffc = files.fc;
     if (ffc == NULL) {
-        return DETECT_ENGINE_INSPECT_SIG_NO_MATCH;
+        return DETECT_ENGINE_INSPECT_SIG_CANT_MATCH_FILES;
     }
 
     uint8_t r = DETECT_ENGINE_INSPECT_SIG_NO_MATCH;
