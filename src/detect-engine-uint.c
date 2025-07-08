@@ -148,3 +148,51 @@ DetectUintData_u64 *DetectU64Parse(const char *u64str)
 {
     return rs_detect_u64_parse(u64str);
 }
+
+void DetectU64Dump(JsonBuilder *js, const DetectUintData_u64 *du64)
+{
+    DetectU64Data *cd = (DetectU64Data *)du64;
+    jb_set_uint(js, "arg1", cd->arg1);
+    jb_set_uint(js, "arg2", cd->arg2);
+    char buf[128];
+    switch (cd->mode) {
+        case DetectUintModeEqual:
+            jb_set_string(js, "mode", "eq");
+            snprintf(buf, sizeof(buf), "val = %" PRIu64, cd->arg1);
+            jb_set_string(js, "desc", buf);
+            break;
+        case DetectUintModeNe:
+            jb_set_string(js, "mode", "neq");
+            snprintf(buf, sizeof(buf), "val != %" PRIu64, cd->arg1);
+            jb_set_string(js, "desc", buf);
+            break;
+        case DetectUintModeGt:
+            jb_set_string(js, "mode", "gt");
+            snprintf(buf, sizeof(buf), "val > %" PRIu64, cd->arg1);
+            jb_set_string(js, "desc", buf);
+            break;
+        case DetectUintModeLt:
+            jb_set_string(js, "mode", "lt");
+            snprintf(buf, sizeof(buf), "val < %" PRIu64, cd->arg1);
+            jb_set_string(js, "desc", buf);
+            break;
+        case DetectUintModeGte:
+            jb_set_string(js, "mode", "ge");
+            snprintf(buf, sizeof(buf), "val >= %" PRIu64, cd->arg1);
+            jb_set_string(js, "desc", buf);
+            break;
+        case DetectUintModeLte:
+            jb_set_string(js, "mode", "le");
+            snprintf(buf, sizeof(buf), "val <= %" PRIu64, cd->arg1);
+            jb_set_string(js, "desc", buf);
+            break;
+        case DetectUintModeRange:
+            jb_set_string(js, "mode", "range");
+            snprintf(buf, sizeof(buf), "%" PRIu64 " < val < %" PRIu64, cd->arg1, cd->arg2);
+            jb_set_string(js, "desc", buf);
+            break;
+        default:
+            jb_set_string(js, "mode", "unknown");
+    }
+    
+}

@@ -44,6 +44,7 @@ typedef DetectUintData_u8 DetectU8Data;
 
 int DetectU64Match(const uint64_t parg, const DetectUintData_u64 *du64);
 DetectUintData_u64 *DetectU64Parse(const char *u64str);
+void DetectU64Dump(JsonBuilder *js, const DetectUintData_u64 *du64);
 
 int DetectU32Match(const uint32_t parg, const DetectUintData_u32 *du32);
 DetectUintData_u32 *DetectU32Parse(const char *u32str);
