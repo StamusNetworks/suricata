@@ -40,6 +40,7 @@
 /*prototypes*/
 static int DetectBsizeSetup (DetectEngineCtx *, Signature *, const char *);
 static void DetectBsizeFree (DetectEngineCtx *, void *);
+static void DetectBsizeDump(JsonBuilder *js, const void *gcd);
 static int SigParseGetMaxBsize(DetectU64Data *bsz);
 #ifdef UNITTESTS
 static void DetectBsizeRegisterTests (void);
@@ -103,6 +104,7 @@ void DetectBsizeRegister(void)
     sigmatch_table[DETECT_BSIZE].Match = NULL;
     sigmatch_table[DETECT_BSIZE].Setup = DetectBsizeSetup;
     sigmatch_table[DETECT_BSIZE].Free = DetectBsizeFree;
+    sigmatch_table[DETECT_BSIZE].JsonDump = DetectBsizeDump;
 #ifdef UNITTESTS
     sigmatch_table[DETECT_BSIZE].RegisterTests = DetectBsizeRegisterTests;
 #endif
@@ -226,6 +228,15 @@ void DetectBsizeFree(DetectEngineCtx *de_ctx, void *ptr)
     DetectU64Data *bsz = (DetectU64Data *)ptr;
     rs_detect_u64_free(bsz);
 }
+
+static void DetectBsizeDump(JsonBuilder *js, const void *gcd)
+{
+    DetectU64Data *cd = (DetectU64Data *)gcd;
+    jb_open_object(js, "bsize");
+    DetectU64Dump(js, cd);
+    jb_close(js);
+}
+
 
 #ifdef UNITTESTS
 #include "tests/detect-bsize.c"
