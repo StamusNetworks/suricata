@@ -1,6 +1,6 @@
 default:
   tags:
-  - k8s-big
+  - nightly-archive
   retry: 2
 
 image: debian:bookworm
