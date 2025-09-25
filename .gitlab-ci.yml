@@ -1,6 +1,6 @@
 default:
   tags:
-  - nightly-archive
+  - suricata
   retry: 2
 
 image: debian:bookworm
