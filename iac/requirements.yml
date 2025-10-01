@@ -1,0 +1,7 @@
+collections:
+  - name: git@git.stamus-networks.com:markus/ansible-collections.git#/common
+    type: git
+    version: sn-2025092901
+  - name: git@git.stamus-networks.com:markus/ansible-collections.git#/qalab
+    type: git
+    version: sn-2025092901

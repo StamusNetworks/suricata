@@ -1,0 +1,35 @@
+ansible_user: glr
+
+users:
+  - name: markus
+    sudo: true
+    ssh_keys:
+      - key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCSASLSdSP6xB9cf83bshS1hfmcPQUwKJiZ1XezX7Wd3PqN65GDpM+uYPH3tTiJjwfALhLSkkV3euE6lk7PlFNQq9C521+d5MJeqO0njXwSngJwVeJYi+QZSyCTIFFfo4AyxybMPjoW7phOtlg2tHZxO+Nc3g8fdZEPiJEI6VUjhdSnMccsBvETdZ/Y13vgZSB1bW7JhVdkFWScnDAVnVHnPoNfoxL80rhviQxFyJNfKSshVIRNHjqtj7spFgo0MTG7Lo3PJHwHqyo8MeOm/CteqaZT1EoRFflWFOHhPaUZ8D8LsjJVAFgmr4KD8RaQg/rYthPM6xHqVAVlDteKmsDRaBfvfrlgStBLTljt2o9MPD6jgnoKuGxc+yO4BfRAt3bLOPsCyp+toKQ3shpGDp46HxXEosV6xc447vxgHf5fLM9IIVJskU5s/uV9O2ob5EGZwtoZfO3OuKuh/MrVdGDI1/aThLF5dLhyoc+ZPS/uzBmUUr/KiiDTSbAA8qQflO0= markus@loki
+      - key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDYi4bzFLNL6jKLeq5uxigTFmZPJg2scp/O4eAp0zWjye3mVJb43m9n81hLEMS5E6OMCrm3g5/utmbg8YkjmzYrDI0dpExkfXlKIQua+xdNdsULEcQpSBKmXnA17whzPHKbLZFiOivbOML7Iclp1pWM4ZS3UgMCg8f4l9bpsxKa6UWFab+92JkcKXoXLGdxwJXjDz85v4WECJAByq2506KYzK1On8knyXbHXJ9OT5R2D9bZWgclaajzNxKd7QKZOxcZu1ls/ZdUSiAK7LoXVPYRltEWIn/RI0PtWCzKQkbzIFHR9hXdBGBBXBPRWZjpk0tn4ZIAn4Aq2PphDiVVdJr0Ohrs29ji+b59Zm2Hyk5zcXSkwirN4ji/JxFsJmxCB+I7RLIAxZTZ0dY7G8NlSTx9x2RlKngV0pk60JTwzCYU/LdnXADgzkSdHJUOBH4BCg6CzYnnHfPtj1T9vX0/H0+stiIS7uMY2t4UuyrRm/BYijzR0XFJ7YzcKj3HupAh/L0= markuskont@TheGary.local
+
+data_drives:
+  - size: 200
+    mount: /var/lib/docker
+    fs: btrfs
+
+proxmox_user: ""
+proxmox_pass: ""
+proxmox_token_id: ""
+proxmox_token: ""
+
+proxmox_host: 10.135.9.17
+proxmox_template_name: "template-debian13-generic"
+proxmox_node: "proxmox4"
+proxmox_storage: "local-lvm"
+proxmox_realm: pam
+
+vm_subnet: 24
+vm_gateway: "10.136.0.1"
+vm_dns_servers:
+  - "1.1.1.1"
+  - "8.8.8.8"
+
+vm_disk_size_root: 30G
+
+cpu_cores: 4
+memory_bytes: "{{ 8 * 1024 }}"
