@@ -33,6 +33,7 @@
 #include "util-mimetype.h"
 #include "util-profiling.h"
 #include "app-layer-parser.h"
+#include "util-profiling.h"
 
 
 static int g_file_match_list_id = 0;
