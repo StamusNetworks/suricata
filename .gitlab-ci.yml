@@ -77,7 +77,7 @@ build-pkg:
   - mv "$CI_PROJECT_DIR/../suricata-dbg_$(cat /tmp/deb-version)_amd64.deb" "$CI_PROJECT_DIR/"
 
   # Pass the package to stamus-install
-  - test "$CI_PROJECT_NAMESPACE" = "devel" || exit 0
+  - test "$CI_PROJECT_NAMESPACE" = "devel/dev" || exit 0
   - echo "$CI_COMMIT_REF_NAME" | grep -q '^stamus-[0-9.]*-' || exit 0
   - export UPGRADE_NO="$(echo "$CI_COMMIT_REF_NAME" | sed -e "s/^stamus-\([0-9.]*\)-.*/\1/")"
 
