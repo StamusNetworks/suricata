@@ -1,4 +1,4 @@
-    AC_INIT([suricata],[7.0.10])
+    AC_INIT([suricata],[7.0.12])
     m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])AM_SILENT_RULES([yes])
     AC_CONFIG_HEADERS([src/autoconf.h])
     AC_CONFIG_SRCDIR([src/suricata.c])
@@ -1580,12 +1580,12 @@
             echo
             exit 1
         fi
-        PKG_CHECK_MODULES(LIBHTPMINVERSION, [htp >= 0.5.50],[libhtp_minver_found="yes"],[libhtp_minver_found="no"])
+        PKG_CHECK_MODULES(LIBHTPMINVERSION, [htp >= 0.5.52],[libhtp_minver_found="yes"],[libhtp_minver_found="no"])
         if test "$libhtp_minver_found" = "no"; then
             PKG_CHECK_MODULES(LIBHTPDEVVERSION, [htp = 0.5.X],[libhtp_devver_found="yes"],[libhtp_devver_found="no"])
             if test "$libhtp_devver_found" = "no"; then
                 echo
-                echo "   ERROR! libhtp was found but it is neither >= 0.5.50, nor the dev 0.5.X"
+                echo "   ERROR! libhtp was found but it is neither >= 0.5.52, nor the dev 0.5.X"
                 echo
                 exit 1
             fi
@@ -2295,7 +2295,13 @@ fi
 
 # Cargo/Rust
     AM_CONDITIONAL([RUST_CROSS_COMPILE], [test "x$cross_compiling" = "xyes"])
-    AC_PATH_PROG(RUSTC, rustc, "no")
+
+    # Check for rustc, respecting RUSTC environment variable
+    AC_ARG_VAR([RUSTC], [Rustc command])
+    if test -z "$RUSTC"; then
+        RUSTC="rustc"
+    fi
+    AC_PATH_PROG(RUSTC, $RUSTC, "no")
     if test "$RUSTC" = "no"; then
         echo ""
         echo "    ERROR: Rust compiler not found."
@@ -2309,9 +2315,24 @@ fi
         exit 1
     fi
 
-    AC_PATH_PROG(CARGO, cargo, "no")
-    if test "CARGO" = "no"; then
+    # Check for cargo, respecting CARGO environment variable
+    AC_ARG_VAR([CARGO], [Cargo command])
+    if test -z "$CARGO"; then
+        CARGO="cargo"
+    fi
+    AC_PATH_PROG(CARGO, $CARGO, "no")
+    if test "$CARGO" = "no"; then
         AC_MSG_ERROR([cargo required])
+    fi
+
+    # Check for rustdoc, respecting RUSTDOC environment variable
+    AC_ARG_VAR([RUSTDOC], [Rustdoc command])
+    if test -z "$RUSTDOC"; then
+        RUSTDOC="rustdoc"
+    fi
+    AC_PATH_PROG(RUSTDOC, $RUSTDOC, "no")
+    if test "$RUSTDOC" = "no"; then
+        AC_MSG_ERROR([rustdoc required])
     fi
 
     AC_DEFINE([HAVE_RUST],[1],[Enable Rust language])

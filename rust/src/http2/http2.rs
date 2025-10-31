@@ -212,7 +212,7 @@ impl HTTP2Transaction {
                 self.decoder.http2_encoding_fromvec(&block.value, dir);
             } else if block.name.eq_ignore_ascii_case(b":authority") {
                 authority = Some(&block.value);
-                if block.value.iter().any(|&x| x == b'@') {
+                if block.value.contains(&b'@') {
                     // it is forbidden by RFC 9113 to have userinfo in this field
                     // when in HTTP1 we can have user:password@domain.com
                     self.set_event(HTTP2Event::UserinfoInUri);
@@ -409,6 +409,7 @@ pub enum HTTP2Event {
     AuthorityHostMismatch,
     UserinfoInUri,
     ReassemblyLimitReached,
+    DataStreamZero,
 }
 
 pub struct HTTP2DynTable {
@@ -601,10 +602,7 @@ impl HTTP2State {
         self.tx_id += 1;
         tx.tx_id = self.tx_id;
         tx.state = HTTP2TransactionState::HTTP2StateGlobal;
-        tx.tx_data.update_file_flags(self.state_data.file_flags);
-        // TODO can this tx hold files?
-        tx.tx_data.file_tx = STREAM_TOSERVER|STREAM_TOCLIENT; // might hold files in both directions
-        tx.update_file_flags(tx.tx_data.file_flags);
+        // a global tx (stream id 0) does not hold files cf RFC 9113 section 5.1.1
         self.transactions.push_back(tx);
         return self.transactions.back_mut().unwrap();
     }
@@ -622,6 +620,8 @@ impl HTTP2State {
                     tx_old.set_event(HTTP2Event::TooManyStreams);
                     // use a distinct state, even if we do not log it
                     tx_old.state = HTTP2TransactionState::HTTP2StateTodrop;
+                    tx_old.tx_data.updated_tc = true;
+                    tx_old.tx_data.updated_ts = true;
                 }
                 return None;
             }
@@ -1078,7 +1078,9 @@ impl HTTP2State {
                             data: txdata,
                         });
                     }
-                    if ftype == parser::HTTP2FrameType::Data as u8 {
+                    if ftype == parser::HTTP2FrameType::Data as u8 && sid == 0 {
+                        tx.tx_data.set_event(HTTP2Event::DataStreamZero as u8);
+                    } else if ftype == parser::HTTP2FrameType::Data as u8 && sid > 0 {
                         match unsafe { SURICATA_HTTP2_FILE_CONFIG } {
                             Some(sfcm) => {
                                 //borrow checker forbids to reuse directly tx

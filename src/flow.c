@@ -1,4 +1,4 @@
-/* Copyright (C) 2007-2013 Open Information Security Foundation
+/* Copyright (C) 2007-2024 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -143,6 +143,11 @@ uint64_t FlowGetMemuse(void)
     return memusecopy;
 }
 
+enum ExceptionPolicy FlowGetMemcapExceptionPolicy(void)
+{
+    return flow_config.memcap_policy;
+}
+
 void FlowCleanupAppLayer(Flow *f)
 {
     if (f == NULL || f->proto == 0)
@@ -151,18 +156,6 @@ void FlowCleanupAppLayer(Flow *f)
     AppLayerParserStateCleanup(f, f->alstate, f->alparser);
     f->alstate = NULL;
     f->alparser = NULL;
-    return;
-}
-
-/** \brief Set the IPOnly scanned flag for 'direction'.
-  *
-  * \param f Flow to set the flag in
-  * \param direction direction to set the flag in
-  */
-void FlowSetIPOnlyFlag(Flow *f, int direction)
-{
-    direction ? (f->flags |= FLOW_TOSERVER_IPONLY_SET) :
-        (f->flags |= FLOW_TOCLIENT_IPONLY_SET);
     return;
 }
 
@@ -242,7 +235,6 @@ int FlowChangeProto(Flow *f)
 static inline void FlowSwapFlags(Flow *f)
 {
     SWAP_FLAGS(f->flags, FLOW_TO_SRC_SEEN, FLOW_TO_DST_SEEN);
-    SWAP_FLAGS(f->flags, FLOW_TOSERVER_IPONLY_SET, FLOW_TOCLIENT_IPONLY_SET);
     SWAP_FLAGS(f->flags, FLOW_SGH_TOSERVER, FLOW_SGH_TOCLIENT);
 
     SWAP_FLAGS(f->flags, FLOW_TOSERVER_DROP_LOGGED, FLOW_TOCLIENT_DROP_LOGGED);
@@ -492,6 +484,9 @@ void FlowHandlePacketUpdate(Flow *f, Packet *p, ThreadVars *tv, DecodeThreadVars
         } else if (PKT_IS_IPV6(p)) {
             FlowUpdateTtlTC(f, p, IPV6_GET_HLIM(p));
         }
+    }
+    if (f->thread_id[pkt_dir] == 0) {
+        f->thread_id[pkt_dir] = (FlowThreadId)tv->id;
     }
 
     if (f->flow_state == FLOW_STATE_ESTABLISHED) {

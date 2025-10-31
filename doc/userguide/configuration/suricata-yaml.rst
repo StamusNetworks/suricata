@@ -317,6 +317,13 @@ the global config is documented.
       #decoder-events-prefix: "decoder.event"
       # Add stream events as stats.
       #stream-events: false
+      # Exception policy stats counters options
+      # (Note: if exception policy: ignore, counters are not logged)
+      exception-policy:
+        #global-stats: true           # default: false. True will log stats for all
+                                      # valid exception policies
+        #per-app-proto-errors: false  # default: false. True will log errors for
+                                        # each app-proto. Warning: VERY verbose
 
 Statistics can be `enabled` or disabled here.
 
@@ -338,6 +345,10 @@ See `issue 2225 <https://redmine.openinfosecfoundation.org/issues/2225>`_.
 Similar to the `decoder-events` option, the `stream-events` option controls
 whether the stream-events are added as counters as well. This is disabled by
 default.
+
+If any exception policy is enabled, stats counters are logged. To control
+verbosity for application layer protocol errors, leave `per-app-proto-errors`
+as false.
 
 Outputs
 ~~~~~~~
@@ -2787,6 +2798,48 @@ The Teredo decoder can be disabled. It is enabled by default.
 Using this default configuration, Teredo detection will run on UDP port
 3544. If the `ports` parameter is missing, or set to `any`, all ports will be
 inspected for possible presence of Teredo.
+
+IP-in-IP
+~~~~~~~~
+
+IPv4
+^^^^
+
+Enable decoding IP-in-IP tunneling for IPv4. There is also a dedicated option to
+set the parent flow for packets, when the engine sees such IP-in-IP packets. This
+option can be enabled regardless of enabled the ipip tunneling.
+As this may impact signature matching and flow tracking, these are disabled by default.
+
+The stats counter `decoder.ipv4_in_ipv4` is associated with this setting.
+
+::
+
+   # IP-in-IP tunneling for ipv4 over ipv4 handling.
+   # Disabled by default, as these will impact number of alerts seen, as well as
+   # number of flows.
+   # ipv4:
+   #   ipip:
+   #     enabled: true
+   #     track-parent-flow: true   # disabled by default
+
+IPv6
+^^^^
+
+By default, for IPv4 over IPv6 tunneling, the parent flow is not set up, as this
+can lead to discrepancies in alerts and flows detected. To enable this setting,
+change::
+
+    decoder:
+      ipv6:
+        ipip-ipv4:
+          track-parent-flow: true
+
+The same is true for IPv6 over IPv6. To enable parent flow setting in this case::
+
+    decoder:
+      ipv6:
+        ipip-ipv6:
+          track-parent-flow: true
 
 Advanced Options
 ----------------

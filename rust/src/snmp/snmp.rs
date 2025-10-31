@@ -209,7 +209,7 @@ impl<'a> SNMPState<'a> {
         SNMPTransaction::new(direction, self.version, self.tx_id)
     }
 
-    fn get_tx_by_id(&mut self, tx_id: u64) -> Option<&SNMPTransaction> {
+    fn get_tx_by_id(&mut self, tx_id: u64) -> Option<&SNMPTransaction<'_>> {
         self.transactions.iter().rev().find(|&tx| tx.id == tx_id + 1)
     }
 
@@ -362,7 +362,7 @@ pub unsafe extern "C" fn rs_snmp_probing_parser(_flow: *const Flow,
     }
     let slice = build_slice!(input,input_len as usize);
     let alproto = ALPROTO_SNMP;
-    if slice.len() < 4 { return ALPROTO_FAILED; }
+    if slice.len() < 4 { return ALPROTO_UNKNOWN; }
     match parse_pdu_envelope_version(slice) {
         Ok((_,_))               => alproto,
         Err(Err::Incomplete(_)) => ALPROTO_UNKNOWN,

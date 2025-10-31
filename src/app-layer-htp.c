@@ -1500,6 +1500,9 @@ static int HtpRequestBodyHandleMultipart(HtpState *hstate, HtpTxUserData *htud, 
         }
     }
 
+    // Use this pos to increase body_parsed
+    // without counting data in the beginning multiple times
+    const uint8_t *pos = chunks_buffer;
     while (header_start != NULL && header_end != NULL &&
             header_end != form_end &&
             header_start < (chunks_buffer + chunks_buffer_len) &&
@@ -1588,7 +1591,8 @@ static int HtpRequestBodyHandleMultipart(HtpState *hstate, HtpTxUserData *htud, 
                 }
                 FlagDetectStateNewFile(htud, STREAM_TOSERVER);
 
-                htud->request_body.body_parsed += (header_end - chunks_buffer);
+                htud->request_body.body_parsed += (header_end - pos);
+                pos = header_end;
                 htud->tsflags &= ~HTP_FILENAME_SET;
             } else {
                 SCLogDebug("chunk doesn't contain form end");
@@ -1616,9 +1620,10 @@ static int HtpRequestBodyHandleMultipart(HtpState *hstate, HtpTxUserData *htud, 
                 if (header_next == NULL) {
                     SCLogDebug("more file data to come");
 
-                    uint32_t offset = (header_end + 4) - chunks_buffer;
+                    uint32_t offset = (header_end + 4) - pos;
                     SCLogDebug("offset %u", offset);
                     htud->request_body.body_parsed += offset;
+                    pos = (header_end + 4);
 
                     if (filedata_len >= (uint32_t)(expected_boundary_len + 2)) {
                         filedata_len -= (expected_boundary_len + 2 - 1);
@@ -1666,7 +1671,8 @@ static int HtpRequestBodyHandleMultipart(HtpState *hstate, HtpTxUserData *htud, 
                     FlagDetectStateNewFile(htud, STREAM_TOSERVER);
 
                     htud->tsflags &= ~HTP_FILENAME_SET;
-                    htud->request_body.body_parsed += (header_end - chunks_buffer);
+                    htud->request_body.body_parsed += (header_end - pos);
+                    pos = header_end;
                 }
             }
         }
@@ -2168,9 +2174,8 @@ static int HTPCallbackRequestStart(htp_tx_t *tx)
         }
         tx_ud->tx_data.file_tx = STREAM_TOSERVER | STREAM_TOCLIENT; // each http tx may xfer files
         htp_tx_set_user_data(tx, tx_ud);
-    } else {
-        tx_ud->tx_data.updated_ts = true;
     }
+    tx_ud->tx_data.updated_ts = true;
     SCReturnInt(HTP_OK);
 }
 
@@ -2210,9 +2215,8 @@ static int HTPCallbackResponseStart(htp_tx_t *tx)
         tx_ud->tx_data.file_tx =
                 STREAM_TOCLIENT; // each http tx may xfer files. Toserver already missed.
         htp_tx_set_user_data(tx, tx_ud);
-    } else {
-        tx_ud->tx_data.updated_tc = true;
     }
+    tx_ud->tx_data.updated_tc = true;
     SCReturnInt(HTP_OK);
 }
 
@@ -6129,6 +6133,8 @@ static int HTPBodyReassemblyTest01(void)
     BUG_ON(r != 0);
     r = HtpBodyAppendChunk(NULL, &htud.request_body, chunk2, sizeof(chunk2)-1);
     BUG_ON(r != 0);
+    htud.boundary = (uint8_t *)strdup("e5a320f21416a02493a0a6f561b1c494");
+    htud.boundary_len = strlen("e5a320f21416a02493a0a6f561b1c494");
 
     const uint8_t *chunks_buffer = NULL;
     uint32_t chunks_buffer_len = 0;
@@ -6154,6 +6160,7 @@ static int HTPBodyReassemblyTest01(void)
 
     result = 1;
 end:
+    SCFree(htud.boundary);
     return result;
 }
 
@@ -7072,7 +7079,7 @@ static int HTPParserTest27(void)
     HtpTxUserData *tx_ud = SCMalloc(sizeof(HtpTxUserData));
     FAIL_IF_NULL(tx_ud);
 
-    tx_ud->tsflags |= HTP_STREAM_DEPTH_SET;
+    tx_ud->tsflags = HTP_STREAM_DEPTH_SET;
     tx_ud->request_body.content_len_so_far = 2500;
 
     FAIL_IF(AppLayerHtpCheckDepth(&cfg, &tx_ud->request_body, tx_ud->tsflags));

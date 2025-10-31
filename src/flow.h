@@ -1,4 +1,4 @@
-/* Copyright (C) 2007-2013 Open Information Security Foundation
+/* Copyright (C) 2007-2025 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -30,6 +30,7 @@ typedef struct FlowStorageId FlowStorageId;
 #include "decode.h"
 #include "util-time.h"
 #include "util-exception-policy.h"
+#include "util-exception-policy-types.h"
 #include "util-var.h"
 #include "util-optimize.h"
 #include "app-layer-protos.h"
@@ -52,10 +53,9 @@ typedef struct AppLayerParserState_ AppLayerParserState;
 
 // vacancy
 
-/** Flow was inspected against IP-Only sigs in the toserver direction */
-#define FLOW_TOSERVER_IPONLY_SET        BIT_U32(3)
-/** Flow was inspected against IP-Only sigs in the toclient direction */
-#define FLOW_TOCLIENT_IPONLY_SET        BIT_U32(4)
+// vacancy bit 3
+
+// vacancy bit 4
 
 /** Packet belonging to this flow should not be inspected at all */
 #define FLOW_NOPACKET_INSPECTION        BIT_U32(5)
@@ -228,8 +228,6 @@ typedef struct AppLayerParserState_ AppLayerParserState;
 #define FLOW_PKT_TOSERVER               0x01
 #define FLOW_PKT_TOCLIENT               0x02
 #define FLOW_PKT_ESTABLISHED            0x04
-#define FLOW_PKT_TOSERVER_IPONLY_SET    0x08
-#define FLOW_PKT_TOCLIENT_IPONLY_SET    0x10
 #define FLOW_PKT_TOSERVER_FIRST         0x20
 #define FLOW_PKT_TOCLIENT_FIRST         0x40
 /** last pseudo packet in the flow. Can be used to trigger final clean,
@@ -472,6 +470,9 @@ typedef struct Flow_
     uint8_t min_ttl_toclient;
     uint8_t max_ttl_toclient;
 
+    /** which exception policies were applied, if any */
+    uint8_t applied_exception_policy;
+
     /** application level storage ptrs.
      *
      */
@@ -554,7 +555,6 @@ void FlowHandlePacket (ThreadVars *, FlowLookupStruct *, Packet *);
 void FlowInitConfig(bool);
 void FlowReset(void);
 void FlowShutdown(void);
-void FlowSetIPOnlyFlag(Flow *, int);
 void FlowSetHasAlertsFlag(Flow *);
 int FlowHasAlerts(const Flow *);
 bool FlowHasGaps(const Flow *, uint8_t way);
@@ -578,6 +578,7 @@ void FlowUpdateState(Flow *f, enum FlowState s);
 int FlowSetMemcap(uint64_t size);
 uint64_t FlowGetMemcap(void);
 uint64_t FlowGetMemuse(void);
+enum ExceptionPolicy FlowGetMemcapExceptionPolicy(void);
 
 FlowStorageId GetFlowBypassInfoID(void);
 void RegisterFlowBypassInfo(void);

@@ -252,9 +252,10 @@ static void UnixClientFree(UnixClient *c)
 static void UnixCommandClose(UnixCommand  *this, int fd)
 {
     UnixClient *item;
+    UnixClient *safe = NULL;
     int found = 0;
 
-    TAILQ_FOREACH(item, &this->clients, next) {
+    TAILQ_FOREACH_SAFE (item, &this->clients, next, safe) {
         if (item->fd == fd) {
             found = 1;
             break;
@@ -519,7 +520,7 @@ static int UnixCommandExecute(UnixCommand * this, char *command, UnixClient *cli
     }
 
     if (UnixCommandSendJSONToClient(client, server_msg) != 0) {
-        goto error;
+        goto error_cmd;
     }
 
     json_decref(jsoncmd);

@@ -544,6 +544,7 @@ noinst_HEADERS = \
 	util-enum.h \
 	util-error.h \
 	util-exception-policy.h \
+	util-exception-policy-types.h \
 	util-file-decompression.h \
 	util-file.h \
 	util-file-swf-decompression.h \
@@ -585,6 +586,7 @@ noinst_HEADERS = \
 	util-mimetype.h \
 	util-misc.h \
 	util-mpm-ac-bs.h \
+	util-mpm-ac-queue.h \
 	util-mpm-ac.h \
 	util-mpm-ac-ks.h \
 	util-mpm.h \
@@ -1189,6 +1191,7 @@ libsuricata_c_a_SOURCES = \
 	util-mimetype.c \
 	util-misc.c \
 	util-mpm-ac-bs.c \
+	util-mpm-ac-queue.c \
 	util-mpm-ac.c \
 	util-mpm-ac-ks.c \
 	util-mpm-ac-ks-small.c \
