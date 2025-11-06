@@ -9,6 +9,7 @@ in with pkgs;
       bash
       cargo
       rustc
+      debian-devscripts
       rust-cbindgen
       rust-analyzer
       tree-sitter-grammars.tree-sitter-rust
