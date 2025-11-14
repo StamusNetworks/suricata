@@ -454,13 +454,7 @@ static void AlertAddPayload(AlertJsonOutputCtx *json_output_ctx, JsonBuilder *js
     }
 
     if (json_output_ctx->flags & LOG_JSON_PAYLOAD) {
-        uint8_t printable_buf[p->payload_len + 1];
-        uint32_t offset = 0;
-        PrintStringsToBuffer(printable_buf, &offset,
-                p->payload_len + 1,
-                p->payload, p->payload_len);
-        printable_buf[p->payload_len] = '\0';
-        jb_set_string(js, "payload_printable", (char *)printable_buf);
+        SCJbSetPrintAsciiString(js, "payload_printable", p->payload, p->payload_len);
     }
 }
 
@@ -715,7 +709,12 @@ void EveAddVerdict(JsonBuilder *jb, const Packet *p)
 
     } else if (PacketCheckAction(p, ACTION_DROP) && EngineModeIsIPS()) {
         JB_SET_STRING(jb, "action", "drop");
-    } else if (p->alerts.alerts[p->alerts.cnt].action & ACTION_PASS) {
+    } else if (p->alerts.cnt == 0 ||
+               (p->alerts.cnt <= packet_alert_max &&
+                       (p->alerts.alerts[p->alerts.cnt - 1].action &
+                               (ACTION_PASS | ACTION_ALERT)) == (ACTION_PASS | ACTION_ALERT)) ||
+               (p->alerts.cnt < packet_alert_max &&
+                       p->alerts.alerts[p->alerts.cnt].action & ACTION_PASS)) {
         JB_SET_STRING(jb, "action", "pass");
     } else {
         // TODO make sure we don't have a situation where this wouldn't work
@@ -771,11 +770,8 @@ static bool AlertJsonStreamData(const AlertJsonOutputCtx *json_output_ctx, JsonA
         }
 
         if (json_output_ctx->flags & LOG_JSON_PAYLOAD) {
-            uint8_t printable_buf[cbd.payload->offset + 1];
-            uint32_t offset = 0;
-            PrintStringsToBuffer(printable_buf, &offset, sizeof(printable_buf), cbd.payload->buffer,
-                    cbd.payload->offset);
-            jb_set_string(jb, "payload_printable", (char *)printable_buf);
+            SCJbSetPrintAsciiString(
+                    jb, "payload_printable", cbd.payload->buffer, cbd.payload->offset);
         }
         return true;
     }

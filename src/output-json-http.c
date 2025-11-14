@@ -238,13 +238,12 @@ static void EveHttpLogJSONBasic(JsonBuilder *js, htp_tx_t *tx)
     if (tx->response_headers != NULL) {
         htp_header_t *h_content_type = htp_table_get_c(tx->response_headers, "content-type");
         if (h_content_type != NULL) {
-            const size_t size = bstr_len(h_content_type->value) * 2 + 1;
-            char string[size];
-            BytesToStringBuffer(bstr_ptr(h_content_type->value), bstr_len(h_content_type->value), string, size);
-            char *p = strchr(string, ';');
+            uint32_t len = (uint32_t)bstr_len(h_content_type->value);
+            const uint8_t *p = memchr(bstr_ptr(h_content_type->value), ';', len);
             if (p != NULL)
-                *p = '\0';
-            jb_set_string(js, "http_content_type", string);
+                len = (uint32_t)(p - bstr_ptr(h_content_type->value));
+            jb_set_string_from_bytes(
+                    js, "http_content_type", bstr_ptr(h_content_type->value), len);
         }
         htp_header_t *h_content_range = htp_table_get_c(tx->response_headers, "content-range");
         if (h_content_range != NULL) {
@@ -410,7 +409,6 @@ static void EveHttpLogJSONHeaders(
 static void BodyPrintableBuffer(JsonBuilder *js, HtpBody *body, const char *key)
 {
     if (body->sb != NULL && body->sb->region.buf != NULL) {
-        uint32_t offset = 0;
         const uint8_t *body_data;
         uint32_t body_data_len;
         uint64_t body_offset;
@@ -420,13 +418,7 @@ static void BodyPrintableBuffer(JsonBuilder *js, HtpBody *body, const char *key)
             return;
         }
 
-        uint8_t printable_buf[body_data_len + 1];
-        PrintStringsToBuffer(printable_buf, &offset,
-                             sizeof(printable_buf),
-                             body_data, body_data_len);
-        if (offset > 0) {
-            jb_set_string(js, key, (char *)printable_buf);
-        }
+        SCJbSetPrintAsciiString(js, key, body_data, body_data_len);
     }
 }
 

@@ -137,6 +137,7 @@ impl std::str::FromStr for HTTP2ErrorCode {
         match su_slice {
             "NO_ERROR" => Ok(HTTP2ErrorCode::NoError),
             "PROTOCOL_ERROR" => Ok(HTTP2ErrorCode::ProtocolError),
+            "INTERNAL_ERROR" => Ok(HTTP2ErrorCode::InternalError),
             "FLOW_CONTROL_ERROR" => Ok(HTTP2ErrorCode::FlowControlError),
             "SETTINGS_TIMEOUT" => Ok(HTTP2ErrorCode::SettingsTimeout),
             "STREAM_CLOSED" => Ok(HTTP2ErrorCode::StreamClosed),
@@ -159,6 +160,7 @@ pub struct HTTP2FrameGoAway {
 }
 
 pub fn http2_parse_frame_goaway(i: &[u8]) -> IResult<&[u8], HTTP2FrameGoAway> {
+    let (i, _last_stream_id) = be_u32(i)?;
     let (i, errorcode) = be_u32(i)?;
     Ok((i, HTTP2FrameGoAway { errorcode }))
 }
