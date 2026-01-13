@@ -392,6 +392,7 @@ noinst_HEADERS = \
 	log-tlslog.h \
 	log-tlsstore.h \
 	output-eve-stream.h \
+	output-eve-null.h \
 	output-filedata.h \
 	output-file.h \
 	output-filestore.h \
@@ -1058,6 +1059,7 @@ libsuricata_c_a_SOURCES = \
 	output-json-tftp.c \
 	output-json-tls.c \
 	output-eve-syslog.c \
+	output-eve-null.c \
 	output-lua.c \
 	output-packet.c \
 	output-stats.c \
