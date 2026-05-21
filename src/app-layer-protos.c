@@ -55,6 +55,7 @@ const AppProtoStringTuple AppProtoStrings[ALPROTO_MAX] = {
     { ALPROTO_QUIC, "quic" },
     { ALPROTO_DHCP, "dhcp" },
     { ALPROTO_SNMP, "snmp" },
+    { ALPROTO_RADIUS, "radius" },
     { ALPROTO_SIP, "sip" },
     { ALPROTO_RFB, "rfb" },
     { ALPROTO_MQTT, "mqtt" },

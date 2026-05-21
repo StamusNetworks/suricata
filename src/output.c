@@ -76,6 +76,7 @@
 #include "output-json-snmp.h"
 #include "output-json-sip.h"
 #include "output-json-rfb.h"
+#include "output-json-radius.h"
 #include "output-json-mqtt.h"
 #include "output-json-pgsql.h"
 #include "output-json-template.h"
@@ -1107,6 +1108,10 @@ void OutputRegisterLoggers(void)
     JsonDHCPLogRegister();
     /* SNMP JSON logger. */
     JsonSNMPLogRegister();
+
+    /* RADIUS JSON logger. */
+    JsonRadiusLogRegister();
+
     /* SIP JSON logger. */
     JsonSIPLogRegister();
     /* RFB JSON logger. */

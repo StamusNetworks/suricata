@@ -403,6 +403,7 @@ noinst_HEADERS = \
 	output-json-bittorrent-dht.h \
 	output-json-dcerpc.h \
 	output-json-dhcp.h \
+	output-json-radius.h \
 	output-json-dnp3.h \
 	output-json-dnp3-objects.h \
 	output-json-dns.h \
@@ -1027,6 +1028,7 @@ libsuricata_c_a_SOURCES = \
 	output-json-common.c \
 	output-json-dcerpc.c \
 	output-json-dhcp.c \
+	output-json-radius.c \
 	output-json-dnp3.c \
 	output-json-dnp3-objects.c \
 	output-json-dns.c \

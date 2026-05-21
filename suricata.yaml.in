@@ -315,6 +315,9 @@ outputs:
             # default), just enough information to map a MAC address
             # to an IP address is logged.
             extended: no
+        - radius:
+            enabled: yes
+            log-credentials: yes  # set to no to suppress user_name and reply_message AVPs
         - ssh
         - mqtt:
             # passwords: yes           # enable output of passwords
@@ -1204,6 +1207,12 @@ app-layer:
 
     dhcp:
       enabled: yes
+
+    radius:
+      enabled: yes
+      detection-ports:
+        dp: 1812,1813
+
 
     sip:
       #enabled: yes

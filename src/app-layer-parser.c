@@ -1791,6 +1791,7 @@ void AppLayerParserRegisterProtocolParsers(void)
     RegisterKRB5Parsers();
     rs_dhcp_register_parser();
     RegisterSNMPParsers();
+    SCRegisterRadiusParser();
     RegisterSIPParsers();
     RegisterQuicParsers();
     rs_template_register_parser();

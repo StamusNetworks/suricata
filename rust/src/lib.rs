@@ -115,6 +115,7 @@ pub mod snmp;
 pub mod ntp;
 pub mod tftp;
 pub mod dhcp;
+pub mod radius;
 pub mod sip;
 pub mod rfb;
 pub mod mqtt;
