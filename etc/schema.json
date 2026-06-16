@@ -1724,6 +1724,10 @@
                     "type": "string",
                     "description": "16-byte RADIUS Authenticator field as lowercase hex; used by go-postproc to correlate accounting request and response"
                 },
+                "acct_status_type": {
+                    "type": "string",
+                    "description": "Convenience copy of the Acct-Status-Type (attribute 40) value (e.g. start, stop, interim_update). Present on accounting messages that carry the attribute; also retained in avp[] for completeness."
+                },
                 "avp": {
                     "type": "array",
                     "description": "All RADIUS Attribute-Value Pairs. Known types use their RFC attribute name as key; unknown types use the decimal attribute type number. Well-known keys include: user_name (1), nas_ip_address (4), nas_port (5), service_type (6), framed_ip_address (8), reply_message (18), state (24), called_station_id (30), calling_station_id (31), nas_identifier (32), acct_status_type (40), acct_session_id (44), event_timestamp (55, ISO 8601 UTC), nas_port_type (61), connect_info (77), eap_message (79), nas_port_id (87). Vendor-Specific (type 26) sub-attributes use key vendor.{vendor_id}.{vendor_type}; 3GPP IMSI (vendor.10415.1) is decoded as a string. Suppressed by log-credentials:no: user_name, reply_message.",

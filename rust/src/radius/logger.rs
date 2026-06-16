@@ -29,6 +29,10 @@ fn log(tx: &RadiusTransaction, js: &mut JsonBuilder, log_credentials: bool) -> R
     let auth_hex: String = tx.authenticator.iter().map(|b| format!("{:02x}", b)).collect();
     js.set_string("authenticator", &auth_hex)?;
 
+    if let Some(avp) = tx.avps.iter().find(|a| a.key == "acct_status_type") {
+        js.set_string("acct_status_type", &avp.value)?;
+    }
+
     js.open_array("avp")?;
     for avp in &tx.avps {
         if !log_credentials
@@ -107,6 +111,15 @@ mod tests {
     #[test]
     fn test_log_empty_avps_ok() {
         let tx = make_tx(2, 1, vec![]);
+        let mut js = JsonBuilder::try_new_object().unwrap();
+        assert!(log(&tx, &mut js, true).is_ok());
+    }
+
+    #[test]
+    fn test_log_acct_status_type_hoisted() {
+        let tx = make_tx(4, 1, vec![
+            RadiusAvp { key: "acct_status_type".into(), value: "start".into() },
+        ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
         assert!(log(&tx, &mut js, true).is_ok());
     }
