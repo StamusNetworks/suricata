@@ -39,6 +39,7 @@
 typedef struct LogRadiusCtx_ {
     OutputJsonCtx *eve_ctx;
     bool log_credentials;
+    char *hoist_csv;
 } LogRadiusCtx;
 
 typedef struct LogRadiusThreadCtx_ {
@@ -56,7 +57,8 @@ static int JsonRadiusLogger(ThreadVars *tv, void *thread_data,
         return TM_ECODE_FAILED;
     }
 
-    SCRadiusLogJson(tx, js, thread->radiuslog_ctx->log_credentials);
+    SCRadiusLogJson(
+            tx, js, thread->radiuslog_ctx->log_credentials, thread->radiuslog_ctx->hoist_csv);
 
     OutputJsonBuilderBuffer(js, thread->thread);
     jb_free(js);
@@ -67,6 +69,9 @@ static int JsonRadiusLogger(ThreadVars *tv, void *thread_data,
 static void OutputRadiusLogDeInitCtxSub(OutputCtx *output_ctx)
 {
     LogRadiusCtx *radiuslog_ctx = (LogRadiusCtx *)output_ctx->data;
+    if (radiuslog_ctx->hoist_csv != NULL) {
+        SCFree(radiuslog_ctx->hoist_csv);
+    }
     SCFree(radiuslog_ctx);
     SCFree(output_ctx);
 }
@@ -86,6 +91,38 @@ static OutputInitResult OutputRadiusLogInitSub(ConfNode *conf, OutputCtx *parent
         const char *val = ConfNodeLookupChildValue(conf, "log-credentials");
         if (val != NULL && strcasecmp(val, "no") == 0) {
             radiuslog_ctx->log_credentials = false;
+        }
+
+        ConfNode *fields = ConfNodeLookupChild(conf, "fields");
+        if (fields != NULL) {
+            size_t total = 0;
+            ConfNode *field;
+            TAILQ_FOREACH (field, &fields->head, next) {
+                if (field->val == NULL) {
+                    continue;
+                }
+                total += strlen(field->val) + 1; /* +1 for ',' or trailing NUL */
+            }
+            if (total > 0) {
+                radiuslog_ctx->hoist_csv = SCCalloc(1, total);
+                if (radiuslog_ctx->hoist_csv == NULL) {
+                    SCFree(radiuslog_ctx);
+                    return result;
+                }
+                char *p = radiuslog_ctx->hoist_csv;
+                TAILQ_FOREACH (field, &fields->head, next) {
+                    if (field->val == NULL) {
+                        continue;
+                    }
+                    if (p != radiuslog_ctx->hoist_csv) {
+                        *p++ = ',';
+                    }
+                    size_t len = strlen(field->val);
+                    memcpy(p, field->val, len);
+                    p += len;
+                }
+                *p = '\0';
+            }
         }
     }
 

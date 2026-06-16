@@ -318,6 +318,14 @@ outputs:
         - radius:
             enabled: yes
             log-credentials: yes  # set to no to suppress user_name and reply_message AVPs
+            # Promote selected AVPs to dedicated keys directly under the
+            # "radius" object (in addition to remaining inside avp[]).
+            # Useful for indexing/filtering on frequently-queried attributes.
+            # Any AVP key emitted by the parser is accepted (see avp[] in the
+            # schema), including vendor.<id>.<type> for Vendor-Specific AVPs.
+            #fields:
+            #  - calling_station_id
+            #  - framed_ip_address
         - ssh
         - mqtt:
             # passwords: yes           # enable output of passwords

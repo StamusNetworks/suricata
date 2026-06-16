@@ -1705,8 +1705,10 @@
         },
         "radius": {
             "type": "object",
-            "description": "RADIUS (RFC 2865/2866) authentication or accounting event",
-            "additionalProperties": false,
+            "description": "RADIUS (RFC 2865/2866) authentication or accounting event. Additional string properties may appear when eve-log.radius.fields lists AVP keys to promote (e.g. calling_station_id, framed_ip_address): the promoted value is a copy of the matching avp[] entry.",
+            "additionalProperties": {
+                "type": "string"
+            },
             "properties": {
                 "code": {
                     "type": "string",
