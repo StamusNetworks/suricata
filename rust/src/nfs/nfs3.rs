@@ -121,7 +121,11 @@ impl NFSState {
                 if let Some(tx) = self.get_file_tx_by_handle(&file_handle, Direction::ToServer) {
                     if let Some(NFSTransactionTypeData::FILE(ref mut tdf)) = tx.type_data {
                         tdf.chunk_count += 1;
-                        tdf.file_additional_procs.push(NFSPROC3_COMMIT);
+                        // only caller pushing
+                        // so we just need to know we saw this procedure
+                        if tdf.file_additional_procs.is_empty() {
+                            tdf.file_additional_procs.push(NFSPROC3_COMMIT);
+                        }
                         filetracker_close(&mut tdf.file_tracker);
                         tdf.file_last_xid = r.hdr.xid;
                         tx.is_last = true;
@@ -183,7 +187,9 @@ impl NFSState {
             }
         }
 
-        self.requestmap.insert(r.hdr.xid, xidmap);
+        if self.requestmap.len() < unsafe { NFS_CFG_MAX_REQ } {
+            self.requestmap.insert(r.hdr.xid, xidmap);
+        }
     }
 
     pub fn process_reply_record_v3(&mut self, r: &RpcReplyPacket, xidmap: &mut NFSRequestXidMap) {
@@ -198,7 +204,9 @@ impl NFSState {
                 nfs_status = rd.status;
 
                 SCLogDebug!("LOOKUP handle {:?}", rd.handle);
-                self.namemap.insert(rd.handle.value.to_vec(), xidmap.file_name.to_vec());
+                if self.namemap.len() < unsafe { NFS_CFG_MAX_NAMES } {
+                    self.namemap.insert(rd.handle.value.to_vec(), xidmap.file_name.to_vec());
+                }
                 resp_handle = rd.handle.value.to_vec();
             } else {
                 self.set_event(NFSEvent::MalformedData);
@@ -211,7 +219,9 @@ impl NFSState {
 
                 if let Some(h) = rd.handle {
                     SCLogDebug!("handle {:?}", h);
-                    self.namemap.insert(h.value.to_vec(), xidmap.file_name.to_vec());
+                    if self.namemap.len() < unsafe { NFS_CFG_MAX_NAMES } {
+                        self.namemap.insert(h.value.to_vec(), xidmap.file_name.to_vec());
+                    }
                     resp_handle = h.value.to_vec();
                 }
             } else {
@@ -244,8 +254,10 @@ impl NFSState {
                             SCLogDebug!("e {:?}", e);
                             if let Some(ref h) = e.handle {
                                 SCLogDebug!("h {:?}", h);
-                                self.namemap.insert(h.value.to_vec(),
+                                if self.namemap.len() < unsafe { NFS_CFG_MAX_NAMES } {
+                                    self.namemap.insert(h.value.to_vec(),
                                         e.name_vec.to_vec());
+                                }
                             }
                         }
                     }

@@ -91,6 +91,9 @@ static mut ALPROTO_NFS: AppProto = ALPROTO_UNKNOWN;
  * Transaction lookup.
  */
 
+pub static mut NFS_CFG_MAX_REQ: usize = 512;
+pub static mut NFS_CFG_MAX_NAMES: usize = 512;
+
 #[derive(AppLayerFrameType)]
 pub enum NFSFrameType {
     RPCPdu,
@@ -826,7 +829,9 @@ impl NFSState {
 
         let mut xidmap = NFSRequestXidMap::new(r.progver, r.procedure, 0);
         xidmap.file_handle = w.handle.value.to_vec();
-        self.requestmap.insert(r.hdr.xid, xidmap);
+        if self.requestmap.len() < unsafe { NFS_CFG_MAX_REQ } {
+            self.requestmap.insert(r.hdr.xid, xidmap);
+        }
 
         return self.process_write_record(r, w);
     }
@@ -2037,6 +2042,30 @@ pub unsafe extern "C" fn rs_nfs_register_parser() {
             let _ = AppLayerRegisterParser(&parser, alproto);
         }
         SCLogDebug!("Rust nfs parser registered.");
+        let retval = conf_get("app-layer.protocols.nfs.max-requests");
+        if let Some(val) = retval {
+            if let Ok(v) = val.parse::<usize>() {
+                if v > 0 {
+                    NFS_CFG_MAX_REQ = v;
+                } else {
+                    SCLogError!("Invalid max-requests value, must be >0");
+                }
+            } else {
+                SCLogError!("Invalid max-requests value");
+            }
+        }
+        let retval = conf_get("app-layer.protocols.nfs.max-names");
+        if let Some(val) = retval {
+            if let Ok(v) = val.parse::<usize>() {
+                if v > 0 {
+                    NFS_CFG_MAX_NAMES = v;
+                } else {
+                    SCLogError!("Invalid max-names value, must be >0");
+                }
+            } else {
+                SCLogError!("Invalid max-names value");
+            }
+        }
     } else {
         SCLogDebug!("Protocol detector and parser disabled for nfs.");
     }

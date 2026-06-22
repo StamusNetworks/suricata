@@ -1,4 +1,4 @@
-    AC_INIT([suricata],[7.0.15])
+    AC_INIT([suricata],[7.0.16])
     m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])AM_SILENT_RULES([yes])
     AC_CONFIG_HEADERS([src/autoconf.h])
     AC_CONFIG_SRCDIR([src/suricata.c])
@@ -501,6 +501,14 @@
         fi
     ])
     AM_CONDITIONAL([DEBUG_VALIDATION], [test "x$enable_debug_validation" = "xyes"])
+
+  # enable qa-simulation mode -- disabled by default
+    AC_ARG_ENABLE(qa-simulation,
+           AS_HELP_STRING([--enable-qa-simulation], [Enable qa-simulation mode]), [enable_qa_simulation=$enableval],[enable_qa_simulation=no])
+    AS_IF([test "x$enable_qa_simulation" = "xyes"], [
+        AC_DEFINE([QA_SIMULATION],[1],[Enable qa-simulation mode])
+    ])
+    AM_CONDITIONAL([QA_SIMULATION], [test "x$enable_qa_simulation" = "xyes"])
 
   # profiling support
     AC_ARG_ENABLE(profiling,
@@ -2734,6 +2742,7 @@ Development settings:
   Unit tests enabled:                      ${enable_unittests}
   Debug output enabled:                    ${enable_debug}
   Debug validation enabled:                ${enable_debug_validation}
+  QA-simulation enabled:                   ${enable_qa_simulation}
   Fuzz targets enabled:                    ${enable_fuzztargets}
 
 Generic build parameters:

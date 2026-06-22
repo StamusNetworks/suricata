@@ -458,8 +458,12 @@ static inline int DefragTrackerCompare(DefragTracker *t, Packet *p)
 {
     uint32_t id;
     if (PKT_IS_IPV4(p)) {
+        if (t->af != AF_INET)
+            return 0;
         id = (uint32_t)IPV4_GET_IPID(p);
     } else {
+        if (t->af != AF_INET6)
+            return 0;
         id = IPV6_EXTHDR_GET_FH_ID(p);
     }
 
@@ -485,7 +489,7 @@ static void DefragExceptionPolicyStatsIncr(
  */
 static DefragTracker *DefragTrackerGetNew(ThreadVars *tv, DecodeThreadVars *dtv, Packet *p)
 {
-#ifdef DEBUG
+#ifdef QA_SIMULATION
     if (g_eps_defrag_memcap != UINT64_MAX && g_eps_defrag_memcap == p->pcap_cnt) {
         SCLogNotice("simulating memcap hit for packet %" PRIu64, p->pcap_cnt);
         ExceptionPolicyApply(p, defrag_config.memcap_policy, PKT_DROP_REASON_DEFRAG_MEMCAP);
