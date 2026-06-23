@@ -18,8 +18,10 @@
 //! RADIUS wire-format parsing (RFC 2865 / RFC 2866).
 
 use nom7::bytes::streaming::take;
-use nom7::number::streaming::{be_u16, be_u8};
-use nom7::{IResult, Parser};
+use nom7::combinator::{complete, verify};
+use nom7::multi::many0;
+use nom7::number::streaming::{be_u16, be_u32, be_u8};
+use nom7::IResult;
 
 pub struct RadiusAvp {
     pub key: String,
@@ -42,76 +44,60 @@ pub fn parse_radius_header(input: &[u8]) -> IResult<&[u8], RadiusHeader> {
     let (i, code) = be_u8(input)?;
     let (i, identifier) = be_u8(i)?;
     let (i, length) = be_u16(i)?;
-    let (i, auth_bytes) = take(16usize).parse(i)?;
+    let (i, auth_bytes) = take(16_usize)(i)?;
     let mut authenticator = [0u8; 16];
     authenticator.copy_from_slice(auth_bytes);
     Ok((i, RadiusHeader { code, identifier, length, authenticator }))
 }
 
+/// Parse a single TLV (type, length, value). `length` includes the 2-byte header.
+fn parse_tlv(input: &[u8]) -> IResult<&[u8], (u8, &[u8])> {
+    let (i, attr_type) = be_u8(input)?;
+    let (i, attr_len) = verify(be_u8, |&v| v >= 2)(i)?;
+    let (i, value) = take((attr_len - 2) as usize)(i)?;
+    Ok((i, (attr_type, value)))
+}
+
 /// Parse the attribute TLV list following the 20-byte RADIUS header.
-///
-/// Returns a direct `Vec` (not an `IResult`) to tolerate unknown attribute
-/// types without aborting the loop — mirroring `parse_ies` in gtpc/parser.rs.
-/// On TLV length overrun, the loop stops and returns what was decoded so far.
-pub fn parse_avps(data: &[u8]) -> Vec<RadiusAvp> {
-    let mut avps = Vec::new();
-    let mut i = 0;
-    while i + 2 <= data.len() {
-        let attr_type = data[i];
-        let attr_len = data[i + 1] as usize;
-        if attr_len < 2 {
-            break;
-        }
-        let value_end = i + attr_len;
-        if value_end > data.len() {
-            break;
-        }
-        let value = &data[i + 2..value_end];
+/// A malformed TLV (under-length or overrun) stops `many0` and returns the
+/// attributes decoded so far.
+pub fn parse_avps(data: &[u8]) -> IResult<&[u8], Vec<RadiusAvp>> {
+    let (rem, tlvs) = many0(complete(parse_tlv))(data)?;
+    let mut avps = Vec::with_capacity(tlvs.len());
+    for (attr_type, value) in tlvs {
         if attr_type == 26 {
             avps.extend(decode_vsa(value));
         } else {
             avps.push(decode_avp(attr_type, value));
         }
-        i = value_end;
     }
-    avps
+    Ok((rem, avps))
+}
+
+fn parse_vsa(value: &[u8]) -> IResult<&[u8], Vec<RadiusAvp>> {
+    let (i, vendor_id) = be_u32(value)?;
+    let (rem, sub_tlvs) = many0(complete(parse_tlv))(i)?;
+    let avps = sub_tlvs
+        .into_iter()
+        .map(|(vtype, data)| RadiusAvp {
+            key: format!("vendor.{}.{}", vendor_id, vtype),
+            value: decode_vsa_value(vendor_id, vtype, data),
+        })
+        .collect();
+    Ok((rem, avps))
 }
 
 /// Decode a Vendor-Specific attribute (type 26, RFC 2865 §5.26).
-/// Each sub-attribute becomes a separate entry with key `vendor.{vendor_id}.{vendor_type}`.
+/// Each sub-attribute becomes a separate entry keyed `vendor.{vendor_id}.{vendor_type}`.
+/// Falls back to a single hex-encoded entry when the payload is too short or has no
+/// parseable sub-attributes.
 fn decode_vsa(value: &[u8]) -> Vec<RadiusAvp> {
-    if value.len() < 6 {
-        return vec![RadiusAvp {
+    match parse_vsa(value) {
+        Ok((_, avps)) if !avps.is_empty() => avps,
+        _ => vec![RadiusAvp {
             key: "vendor_specific".into(),
             value: hex_encode(value),
-        }];
-    }
-    let vendor_id = u32::from_be_bytes([value[0], value[1], value[2], value[3]]);
-    let mut avps = Vec::new();
-    let mut i = 4;
-    while i + 2 <= value.len() {
-        let vtype = value[i];
-        let vlen = value[i + 1] as usize;
-        if vlen < 2 {
-            break;
-        }
-        let vend = i + vlen;
-        if vend > value.len() {
-            break;
-        }
-        avps.push(RadiusAvp {
-            key: format!("vendor.{}.{}", vendor_id, vtype),
-            value: decode_vsa_value(vendor_id, vtype, &value[i + 2..vend]),
-        });
-        i = vend;
-    }
-    if avps.is_empty() {
-        vec![RadiusAvp {
-            key: "vendor_specific".into(),
-            value: hex_encode(value),
-        }]
-    } else {
-        avps
+        }],
     }
 }
 
@@ -281,7 +267,7 @@ pub fn parse_radius_message(input: &[u8]) -> Option<RadiusParsedMessage> {
     if total > input.len() {
         return None;
     }
-    let avps = parse_avps(&input[20..total]);
+    let (_, avps) = parse_avps(&input[20..total]).ok()?;
     Some(RadiusParsedMessage { header, avps })
 }
 
@@ -396,7 +382,7 @@ mod tests {
     fn test_parse_avps_user_name() {
         // User-Name attr: type=1, len=7, value="alice"
         let buf: &[u8] = &[1, 7, b'a', b'l', b'i', b'c', b'e'];
-        let avps = parse_avps(buf);
+        let (_, avps) = parse_avps(buf).unwrap();
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].key, "user_name");
         assert_eq!(avps[0].value, "alice");
@@ -406,7 +392,7 @@ mod tests {
     fn test_parse_avps_nas_ip_address() {
         // NAS-IP-Address attr: type=4, len=6, value=192.168.1.1
         let buf: &[u8] = &[4, 6, 192, 168, 1, 1];
-        let avps = parse_avps(buf);
+        let (_, avps) = parse_avps(buf).unwrap();
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].key, "nas_ip_address");
         assert_eq!(avps[0].value, "192.168.1.1");
@@ -417,7 +403,7 @@ mod tests {
         let msg = b"Access denied";
         let mut buf = vec![18u8, (2 + msg.len()) as u8];
         buf.extend_from_slice(msg);
-        let avps = parse_avps(&buf);
+        let (_, avps) = parse_avps(&buf).unwrap();
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].key, "reply_message");
         assert_eq!(avps[0].value, "Access denied");
@@ -428,7 +414,7 @@ mod tests {
         // type=99 (unknown): type=99, len=4, value=[0xde,0xad]
         // followed by type=1 (User-Name): type=1, len=7, value="alice"
         let buf: &[u8] = &[99, 4, 0xde, 0xad, 1, 7, b'a', b'l', b'i', b'c', b'e'];
-        let avps = parse_avps(buf);
+        let (_, avps) = parse_avps(buf).unwrap();
         assert_eq!(avps.len(), 2);
         assert_eq!(avps[0].key, "99");
         assert_eq!(avps[0].value, "dead");
@@ -443,7 +429,7 @@ mod tests {
             1, 7, b'a', b'l', b'i', b'c', b'e',
             1, 5, b'b', b'o', b'b',
         ];
-        let avps = parse_avps(buf);
+        let (_, avps) = parse_avps(buf).unwrap();
         assert_eq!(avps.len(), 2);
         assert_eq!(avps[0].value, "alice");
         assert_eq!(avps[1].value, "bob");
@@ -454,7 +440,7 @@ mod tests {
         // First attr: type=1, len=100 — overruns a 10-byte buffer
         // Should stop without panic; no entries decoded
         let buf: &[u8] = &[1, 100, b'x', b'y', b'z'];
-        let avps = parse_avps(buf);
+        let (_, avps) = parse_avps(buf).unwrap();
         assert_eq!(avps.len(), 0);
     }
 
@@ -465,7 +451,7 @@ mod tests {
             1, 4, b'a', b'b',   // valid: User-Name "ab"
             4, 100, 1, 2,        // overruns: NAS-IP-Address with declared len=100
         ];
-        let avps = parse_avps(buf);
+        let (_, avps) = parse_avps(buf).unwrap();
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].key, "user_name");
     }
@@ -503,31 +489,34 @@ mod tests {
 
     #[test]
     fn test_parse_vsa_single_subattr() {
-        // VSA: type=26, len=10, vendor-id=10415(3GPP), vendor-type=1, vendor-len=6, data=[0x01,0x02,0x03,0x04]
-        let mut buf = vec![26u8, 10u8];
-        buf.extend_from_slice(&10415u32.to_be_bytes()); // vendor-id
+        // VSA: type=26, len=12, vendor-id=9(Cisco), vendor-type=1, vendor-len=6, data=[0x01,0x02,0x03,0x04]
+        // Outer length = 2 (AVP header) + 4 (vendor-id) + 6 (sub-TLV) = 12
+        // Vendor 9 has no IMSI shortcut, so the value is hex-encoded.
+        let mut buf = vec![26u8, 12u8];
+        buf.extend_from_slice(&9u32.to_be_bytes()); // vendor-id
         buf.push(1); // vendor-type
         buf.push(6); // vendor-len (2 + 4 data bytes)
         buf.extend_from_slice(&[0x01, 0x02, 0x03, 0x04]);
-        let avps = parse_avps(&buf);
+        let (_, avps) = parse_avps(&buf).unwrap();
         assert_eq!(avps.len(), 1);
-        assert_eq!(avps[0].key, "vendor.10415.1");
+        assert_eq!(avps[0].key, "vendor.9.1");
         assert_eq!(avps[0].value, "01020304");
     }
 
     #[test]
     fn test_parse_vsa_multiple_subattrs() {
-        // Two sub-attributes within one VSA AVP
+        // Two sub-attributes within one VSA AVP. Vendor 9 keeps the hex-encode path
+        // (vendor 10415 sub-type 1 would trigger IMSI string decode).
         let mut buf = vec![26u8, 14u8];
-        buf.extend_from_slice(&10415u32.to_be_bytes()); // vendor-id
+        buf.extend_from_slice(&9u32.to_be_bytes()); // vendor-id
         buf.push(1); buf.push(4); buf.extend_from_slice(&[0xaa, 0xbb]); // sub-attr 1
         buf.push(2); buf.push(4); buf.extend_from_slice(&[0xcc, 0xdd]); // sub-attr 2
-        // Fix length: 2 (type+len) + 4 (vendor-id) + 4 + 4 = 14
-        let avps = parse_avps(&buf);
+        // Length: 2 (type+len) + 4 (vendor-id) + 4 + 4 = 14
+        let (_, avps) = parse_avps(&buf).unwrap();
         assert_eq!(avps.len(), 2);
-        assert_eq!(avps[0].key, "vendor.10415.1");
+        assert_eq!(avps[0].key, "vendor.9.1");
         assert_eq!(avps[0].value, "aabb");
-        assert_eq!(avps[1].key, "vendor.10415.2");
+        assert_eq!(avps[1].key, "vendor.9.2");
         assert_eq!(avps[1].value, "ccdd");
     }
 
@@ -537,7 +526,7 @@ mod tests {
         let ts: u32 = 1704067200;
         let mut buf = vec![55u8, 6u8];
         buf.extend_from_slice(&ts.to_be_bytes());
-        let avps = parse_avps(&buf);
+        let (_, avps) = parse_avps(&buf).unwrap();
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].key, "event_timestamp");
         assert_eq!(avps[0].value, "2024-01-01T00:00:00Z");
@@ -548,11 +537,13 @@ mod tests {
         // VSA vendor 10415, sub-type 1 → IMSI as ASCII string
         let imsi = b"234302012345678";
         let vlen = (2 + imsi.len()) as u8;
-        let mut buf = vec![26u8, (2 + 4 + imsi.len() as u8)];
+        // Outer AVP length = 2 (AVP header) + 4 (vendor-id) + vlen (sub-TLV)
+        let outer_len = 2 + 4 + vlen;
+        let mut buf = vec![26u8, outer_len];
         buf.extend_from_slice(&10415u32.to_be_bytes());
         buf.push(1); buf.push(vlen);
         buf.extend_from_slice(imsi);
-        let avps = parse_avps(&buf);
+        let (_, avps) = parse_avps(&buf).unwrap();
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].key, "vendor.10415.1");
         assert_eq!(avps[0].value, "234302012345678");
