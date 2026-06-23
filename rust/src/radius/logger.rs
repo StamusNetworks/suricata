@@ -23,6 +23,7 @@ use std::os::raw::c_char;
 
 fn log(
     tx: &RadiusTransaction, js: &mut JsonBuilder, log_credentials: bool, hoist_extra: &[&str],
+    only_promoted: bool,
 ) -> Result<(), JsonError> {
     js.open_object("radius")?;
 
@@ -46,19 +47,21 @@ fn log(
         }
     }
 
-    js.open_array("avp")?;
-    for avp in &tx.avps {
-        if !log_credentials
-            && (avp.key == "user_name" || avp.key == "reply_message")
-        {
-            continue;
+    if !only_promoted {
+        js.open_array("avp")?;
+        for avp in &tx.avps {
+            if !log_credentials
+                && (avp.key == "user_name" || avp.key == "reply_message")
+            {
+                continue;
+            }
+            js.start_object()?;
+            js.set_string("key", &avp.key)?;
+            js.set_string("value", &avp.value)?;
+            js.close()?;
         }
-        js.start_object()?;
-        js.set_string("key", &avp.key)?;
-        js.set_string("value", &avp.value)?;
-        js.close()?;
+        js.close()?; // avp array
     }
-    js.close()?; // avp array
 
     js.close()?; // radius object
     Ok(())
@@ -67,7 +70,7 @@ fn log(
 #[no_mangle]
 pub unsafe extern "C" fn SCRadiusLogJson(
     tx: *mut std::os::raw::c_void, js: &mut JsonBuilder, log_credentials: bool,
-    hoist_csv: *const c_char,
+    hoist_csv: *const c_char, only_promoted: bool,
 ) -> bool {
     let tx = cast_pointer!(tx, RadiusTransaction);
     let csv_owned: Option<String> = if hoist_csv.is_null() {
@@ -79,7 +82,7 @@ pub unsafe extern "C" fn SCRadiusLogJson(
         .as_deref()
         .map(|s| s.split(',').map(str::trim).filter(|p| !p.is_empty()).collect())
         .unwrap_or_default();
-    log(tx, js, log_credentials, &hoist).is_ok()
+    log(tx, js, log_credentials, &hoist, only_promoted).is_ok()
 }
 
 #[cfg(test)]
@@ -99,7 +102,7 @@ mod tests {
             RadiusAvp { key: "nas_ip_address".into(), value: "10.0.0.1".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &[]).is_ok());
+        assert!(log(&tx, &mut js, true, &[], false).is_ok());
     }
 
     #[test]
@@ -110,7 +113,7 @@ mod tests {
             RadiusAvp { key: "nas_ip_address".into(), value: "10.0.0.1".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, false, &[]).is_ok());
+        assert!(log(&tx, &mut js, false, &[], false).is_ok());
     }
 
     #[test]
@@ -119,7 +122,7 @@ mod tests {
             RadiusAvp { key: "user_name".into(), value: "alice".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &[]).is_ok());
+        assert!(log(&tx, &mut js, true, &[], false).is_ok());
     }
 
     #[test]
@@ -128,14 +131,14 @@ mod tests {
             RadiusAvp { key: "99".into(), value: "deadbeef".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &[]).is_ok());
+        assert!(log(&tx, &mut js, true, &[], false).is_ok());
     }
 
     #[test]
     fn test_log_empty_avps_ok() {
         let tx = make_tx(2, 1, vec![]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &[]).is_ok());
+        assert!(log(&tx, &mut js, true, &[], false).is_ok());
     }
 
     #[test]
@@ -144,7 +147,7 @@ mod tests {
             RadiusAvp { key: "acct_status_type".into(), value: "start".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &[]).is_ok());
+        assert!(log(&tx, &mut js, true, &[], false).is_ok());
     }
 
     #[test]
@@ -154,7 +157,7 @@ mod tests {
             RadiusAvp { key: "framed_ip_address".into(), value: "10.0.0.5".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &["calling_station_id", "framed_ip_address"]).is_ok());
+        assert!(log(&tx, &mut js, true, &["calling_station_id", "framed_ip_address"], false).is_ok());
     }
 
     #[test]
@@ -163,6 +166,31 @@ mod tests {
             RadiusAvp { key: "user_name".into(), value: "alice".into() },
         ]);
         let mut js = JsonBuilder::try_new_object().unwrap();
-        assert!(log(&tx, &mut js, true, &["does_not_exist"]).is_ok());
+        assert!(log(&tx, &mut js, true, &["does_not_exist"], false).is_ok());
+    }
+
+    /// When `only_promoted` is true, the full `avp` array is omitted from the
+    /// output; only the header fields, the auto-hoisted `acct_status_type`,
+    /// and the configured promoted keys appear at the top level.
+    #[test]
+    fn test_log_only_promoted_ok() {
+        let tx = make_tx(4, 1, vec![
+            RadiusAvp { key: "user_name".into(), value: "alice".into() },
+            RadiusAvp { key: "acct_status_type".into(), value: "start".into() },
+            RadiusAvp { key: "framed_ip_address".into(), value: "10.0.0.5".into() },
+        ]);
+        let mut js = JsonBuilder::try_new_object().unwrap();
+        assert!(log(&tx, &mut js, true, &["framed_ip_address"], true).is_ok());
+    }
+
+    /// `only_promoted` with no fields configured still emits header + auto-hoisted
+    /// keys without producing an empty `avp` array.
+    #[test]
+    fn test_log_only_promoted_no_fields_ok() {
+        let tx = make_tx(1, 1, vec![
+            RadiusAvp { key: "user_name".into(), value: "alice".into() },
+        ]);
+        let mut js = JsonBuilder::try_new_object().unwrap();
+        assert!(log(&tx, &mut js, true, &[], true).is_ok());
     }
 }

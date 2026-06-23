@@ -39,6 +39,7 @@
 typedef struct LogRadiusCtx_ {
     OutputJsonCtx *eve_ctx;
     bool log_credentials;
+    bool only_promoted_fields;
     char *hoist_csv;
 } LogRadiusCtx;
 
@@ -57,8 +58,8 @@ static int JsonRadiusLogger(ThreadVars *tv, void *thread_data,
         return TM_ECODE_FAILED;
     }
 
-    SCRadiusLogJson(
-            tx, js, thread->radiuslog_ctx->log_credentials, thread->radiuslog_ctx->hoist_csv);
+    SCRadiusLogJson(tx, js, thread->radiuslog_ctx->log_credentials,
+            thread->radiuslog_ctx->hoist_csv, thread->radiuslog_ctx->only_promoted_fields);
 
     OutputJsonBuilderBuffer(js, thread->thread);
     jb_free(js);
@@ -91,6 +92,10 @@ static OutputInitResult OutputRadiusLogInitSub(ConfNode *conf, OutputCtx *parent
         const char *val = ConfNodeLookupChildValue(conf, "log-credentials");
         if (val != NULL && strcasecmp(val, "no") == 0) {
             radiuslog_ctx->log_credentials = false;
+        }
+
+        if (ConfNodeChildValueIsTrue(conf, "only-promoted-fields")) {
+            radiuslog_ctx->only_promoted_fields = true;
         }
 
         ConfNode *fields = ConfNodeLookupChild(conf, "fields");
