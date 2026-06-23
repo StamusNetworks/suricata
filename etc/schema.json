@@ -3987,6 +3987,9 @@
                                 "rdp": {
                                     "$ref": "#/$defs/stats_applayer_error"
                                 },
+                                "radius": {
+                                    "$ref": "#/$defs/stats_applayer_error"
+                                },
                                 "rfb": {
                                     "$ref": "#/$defs/stats_applayer_error"
                                 },
@@ -4104,6 +4107,9 @@
                                 "rdp": {
                                     "type": "integer"
                                 },
+                                "radius": {
+                                    "type": "integer"
+                                },
                                 "rfb": {
                                     "type": "integer"
                                 },
@@ -4213,6 +4219,9 @@
                                     "type": "integer"
                                 },
                                 "rdp": {
+                                    "type": "integer"
+                                },
+                                "radius": {
                                     "type": "integer"
                                 },
                                 "rfb": {
