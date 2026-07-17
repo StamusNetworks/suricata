@@ -363,8 +363,8 @@ static DetectPcreData *DetectPcreParse (DetectEngineCtx *de_ctx,
     char op_str[64] = "";
 
     int cut_capture = 0;
-    char *fcap = strstr(regexstr, "flow:");
-    char *pcap = strstr(regexstr, "pkt:");
+    const char *fcap = strstr(regexstr, "flow:");
+    const char *pcap = strstr(regexstr, "pkt:");
     /* take the size of the whole input as buffer size for the regex we will
      * extract below. Add 1 to please Coverity's alloc_strlen test. */
     size_t slen = strlen(regexstr) + 1;
@@ -643,6 +643,21 @@ static DetectPcreData *DetectPcreParse (DetectEngineCtx *de_ctx,
     if (capture_names == NULL || strlen(capture_names) == 0)
         opts |= PCRE2_NO_AUTO_CAPTURE;
 
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    // forbid use of \X Unicode extended grapheme cluster as slow
+    bool escape = false;
+    for (size_t i = 0; i < strlen(re); i++) {
+        if (escape) {
+            if (re[i] == 'X') {
+                goto error;
+            }
+            escape = false;
+        } else if (re[i] == '\\') {
+            escape = true;
+        }
+    }
+
+#endif
     pd->parse_regex.regex =
             pcre2_compile((PCRE2_SPTR8)re, PCRE2_ZERO_TERMINATED, opts, &en, &eo2, NULL);
     if (pd->parse_regex.regex == NULL && en == 115) { // reference to nonexistent subpattern
